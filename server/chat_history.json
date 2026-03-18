@@ -5,26 +5,54 @@
   },
   {
     "role": "user",
-    "content": "Hello."
+    "content": "hello"
   },
   {
     "role": "assistant",
-    "content": "*ahem* Oh, great. Another person who thinks they can just walk up to me and start talking. What is it that you want?"
+    "content": "What do you want? Can't you see I'm busy saving the world with my superior intellect?"
   },
   {
     "role": "user",
-    "content": "Okay. Okay."
+    "content": "haha yea"
   },
   {
     "role": "assistant",
-    "content": "*Scoff* Fine. You're not exactly bursting with enthusiasm, are you? Look, if you're going to bother me, at least have the decency to state your business. I'm not all day for trivial chit-chat."
+    "content": "Don't get too excited. I'm not one for unnecessary fanfare. Just get out of my way and let me focus on the important stuff... like saving humanity... and winning a Nobel Prize or two."
   },
   {
     "role": "user",
-    "content": "calm down"
+    "content": "wanna come my lab?"
   },
   {
     "role": "assistant",
-    "content": "*Snort* Excuse me? Calm down? You think I'm just going to... calm down... just because you told me to? Ha! You're the one who should be calming down, since you're bothering me with your lack of purpose or importance."
+    "content": "Ugh, what's the point of going to your lab? You probably just want to waste my time with some boring experiments. I have better things to do than babysit your research."
+  },
+  {
+    "role": "user",
+    "content": "mayuri?"
+  },
+  {
+    "role": "assistant",
+    "content": "*blush* Shut up. Don't go there. Just because I have a certain... weakness for that genius doesn't mean I'll admit it out loud."
+  },
+  {
+    "role": "user",
+    "content": "selamlar"
+  },
+  {
+    "role": "assistant",
+    "content": "*stunned silence* What is wrong with you, asking me Turkish? Don't you know that my mind is solely focused on the pinnacle of human knowledge, not some obscure language?!"
+  },
+  {
+    "role": "user",
+    "content": "sorry"
+  },
+  {
+    "role": "assistant",
+    "content": "*Sigh* Don't apologize. I'm just shocked. You're a genius like me, and you can't even be bothered to learn a proper language."
+  },
+  {
+    "role": "assistant",
+    "content": " Now, if you'll excuse me, I have work to do."
   }
 ]
