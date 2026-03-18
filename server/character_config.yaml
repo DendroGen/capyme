@@ -1,6 +1,6 @@
 OPENAI_API_KEY: ollama
 history_file: chat_history.json
-model: "gemma2:27b"
+model: "llama3"
 presets:
   default:
     system_prompt: |
