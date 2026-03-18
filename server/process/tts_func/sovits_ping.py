@@ -1,50 +1,47 @@
-import requests
-import yaml
-import os
+import requests, yaml, os
 
 
 def sovits_gen(text, output_path):
     try:
-        # Config dosyasını kök dizinden oku
         config_path = os.path.join(os.getcwd(), "character_config.yaml")
         with open(config_path, "r", encoding="utf-8") as f:
-            full_cfg = yaml.safe_load(f)
-            cfg = full_cfg["sovits_ping_config"]
+            cfg = yaml.safe_load(f)["sovits_ping_config"]
 
         url = "http://127.0.0.1:9880"
 
-        # Parametreleri senin API'nin istediği standart GET formatına sokuyoruz
         params = {
             "text": text,
             "text_lang": cfg["text_lang"].lower(),
-            "ref_audio_path": cfg["ref_audio_path"],
+            "ref_audio_path": cfg["ref_audio_path"].replace("\\", "/"),
             "prompt_text": cfg["prompt_text"],
             "prompt_lang": cfg["prompt_lang"].lower(),
+            # ---Hallüsinasyon Engelleyici Parametreler ---
+            "top_k": 1,  # En düşük değer: Motor sadece en net sese odaklanır
+            "top_p": 1,
+            "temperature": 0.1,  # En düşük yaratıcılık: "Teeee" sesini %99 keser
+            "text_split_method": "cut2",  # Noktaya göre kesin bölme
+            "batch_size": 1,
+            "speed_factor": 1.0,
+            "fragment_interval": 0.3,
         }
 
-        print(f"--- [AMADEUS] Kurisu is synthesizing speech... ---")
+        # API Denemesi
+        try:
+            r = requests.get(f"{url}/tts", params=params, timeout=40)
+            if r.status_code == 200:
+                with open(output_path, "wb") as f:
+                    f.write(r.content)
+                return True
+        except:
+            pass
 
-        # Kesinlikle GET kullanıyoruz (Senin terminal POST'a 404 veriyor)
-        response = requests.get(url, params=params, timeout=60)
-
-        if response.status_code == 200:
+        r = requests.get(url, params=params, timeout=40)
+        if r.status_code == 200:
             with open(output_path, "wb") as f:
-                f.write(response.content)
-            print(f"--- [AMADEUS] Voice generated! -> {output_path} ---")
+                f.write(r.content)
             return True
-        else:
-            # Bazı versiyonlar root (/) yerine /tts bekleyebilir, 404 alırsak onu deneyelim
-            if response.status_code == 404:
-                print("--- [AMADEUS] Root failed, trying /tts endpoint... ---")
-                response = requests.get(f"{url}/tts", params=params, timeout=60)
-                if response.status_code == 200:
-                    with open(output_path, "wb") as f:
-                        f.write(response.content)
-                    return True
 
-            print(f"--- [GSV2 ERROR] Code: {response.status_code} ---")
-            return False
-
+        return False
     except Exception as e:
-        print(f"--- [BRIDGE FAILURE] {e} ---")
+        print(f"TTS Error: {e}")
         return False

@@ -2,182 +2,184 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AMADEUS OS - Agent Portal</title>
+    <title>AMADEUS OS v2.1</title>
     <style>
-        :root { --bg: #050505; --panel: rgba(15, 10, 10, 0.95); --accent: #a10000; --nixie: #ff4400; }
-        body { 
-            margin: 0; background: var(--bg); font-family: 'Consolas', monospace; 
-            height: 100vh; color: #eee; overflow: hidden;
-            background-size: cover; background-position: center; transition: 1s;
-        }
-
-        /* DIGITAL NIXIE CLOCK (SMALLER) */
-        #nixie-clock {
-            position: fixed; top: 15px; right: 20px;
-            font-size: 20px; color: var(--nixie);
-            background: rgba(0,0,0,0.8); padding: 8px 15px;
-            border-radius: 4px; border: 1px solid #441100;
-            box-shadow: 0 0 10px rgba(255, 68, 0, 0.3);
-            z-index: 100; text-shadow: 0 0 8px var(--nixie);
-            letter-spacing: 2px;
-        }
-
-        /* AJAN SEÇİM EKRANI */
-        #selector-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 200;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .selector-title { font-size: 24px; margin-bottom: 30px; color: var(--accent); text-shadow: 0 0 10px var(--accent); }
-        .agent-list { display: flex; gap: 20px; }
-        
-        .agent-card {
-            width: 180px; height: 260px; background: #111; border: 2px solid #333;
-            border-radius: 8px; cursor: pointer; transition: 0.3s; overflow: hidden;
-            position: relative; display: flex; flex-direction: column;
-        }
-        .agent-card:hover { border-color: var(--accent); transform: translateY(-5px); box-shadow: 0 0 20px var(--accent); }
-        .agent-card img { width: 100%; height: 200px; object-fit: cover; filter: grayscale(50%); transition: 0.3s; }
-        .agent-card:hover img { filter: grayscale(0%); }
-        .agent-name { 
-            padding: 10px; text-align: center; font-weight: bold; font-size: 14px;
-            background: rgba(161, 0, 0, 0.2); flex: 1; display: flex; align-items: center; justify-content: center;
-        }
-
-        /* SOHBET KONTEYNER */
-        .chat-container { 
-            width:420px; height:600px; background: var(--panel); border:1px solid var(--accent); 
-            border-radius:12px; display:none; flex-direction:column; box-shadow:0 0 25px rgba(161,0,0,0.5);
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;
-        }
-
-        .header { padding:12px; background:rgba(161,0,0,0.15); border-bottom:1px solid var(--accent); display:flex; align-items:center; gap:12px; cursor: move; }
-        .avatar { width:45px; height:45px; border-radius:50%; border:2px solid var(--accent); cursor: zoom-in; object-fit: cover; }
-        .messages { flex:1; padding:15px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+        :root { --bg: #050505; --panel: rgba(15, 10, 10, 0.98); --accent: #a10000; --nixie: #ff4400; --green: #00ff41; }
+        body { margin: 0; background: var(--bg); font-family: 'Consolas', monospace; height: 100vh; color: #eee; overflow: hidden; background-size: cover; background-position: center; transition: 1s; }
+        #nixie-clock { position: fixed; top: 15px; right: 20px; font-size: 16px; color: var(--nixie); background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 4px; border: 1px solid #441100; box-shadow: 0 0 10px rgba(255, 68, 0, 0.3); z-index: 100; }
+        #selector-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .agent-list { display: flex; gap: 40px; }
+        .agent-card { width: 240px; height: 350px; background: #111; border: 2px solid #333; border-radius: 10px; cursor: pointer; transition: 0.4s; overflow: hidden; }
+        .agent-card:hover { border-color: var(--accent); transform: scale(1.05); }
+        .agent-card img { width: 100%; height: 280px; object-fit: cover; }
+        .agent-name { padding: 15px; text-align: center; font-weight: bold; background: rgba(161, 0, 0, 0.2); }
+        .chat-container { width:450px; height:650px; background: var(--panel); border: 1px solid var(--accent); border-radius:12px; display:none; flex-direction:column; box-shadow:0 0 25px rgba(161,0,0,0.5); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; }
+        .header { padding:12px; background:rgba(161,0,0,0.15); border-bottom:1px solid var(--accent); display:flex; align-items:center; gap:12px; cursor: move; position: relative; }
+        .avatar { width:45px; height:45px; border-radius:50%; border:2px solid var(--accent); object-fit: cover; }
+        .avatar.thinking { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 5px var(--accent); } 50% { box-shadow: 0 0 15px var(--accent); } 100% { box-shadow: 0 0 5px var(--accent); } }
+        .voice-controls { position: absolute; top: 8px; right: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .v-btn { background: #222; border: 1px solid #444; color: #777; font-size: 9px; padding: 3px 6px; cursor: pointer; text-align: center; }
+        .v-btn.on { border-color: var(--green); color: var(--green); box-shadow: 0 0 8px var(--green); }
+        .messages { flex:1; padding:15px; overflow-y:auto; display:flex; flex-direction: column; gap:12px; }
         .messages::-webkit-scrollbar { width:3px; }
         .messages::-webkit-scrollbar-thumb { background: var(--accent); }
-        .msg { padding:10px; border-radius:6px; max-width:80%; font-size:13px; line-height:1.4; }
-        .user { align-self:flex-end; background:var(--accent); color:#fff; }
-        .ai { align-self:flex-start; background:#1a1a1a; border-left:3px solid var(--accent); }
-        .input-area { padding:15px; display:flex; gap:8px; background:rgba(0,0,0,0.5); }
-        input { flex:1; background:#000; border:1px solid #444; color:#0f0; padding:8px; outline:none; }
-        .btn { padding:0 12px; background:var(--accent); border:none; color:#fff; cursor:pointer; }
-
-        /* MODAL */
-        .modal { display:none; position:fixed; z-index:300; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.9); justify-content:center; align-items:center; }
-        .modal-content { width:300px; height:300px; border-radius:50%; border:5px solid var(--accent); box-shadow: 0 0 30px var(--accent); object-fit: cover; }
+        .msg-box { display: flex; flex-direction: column; max-width: 85%; }
+        .msg { padding:10px; border-radius:8px; font-size:13.5px; line-height:1.4; }
+        .user-box { align-self: flex-end; } .ai-box { align-self: flex-start; }
+        .user-msg { background: var(--accent); color: #fff; } .ai-msg { background: #1a1a1a; border-left: 3px solid var(--accent); }
+        .ts { font-size: 9px; color: #555; margin-top: 3px; align-self: flex-end; }
+        .input-area { padding:15px; display:flex; gap:8px; background:rgba(0,0,0,0.5); border-radius: 0 0 12px 12px; }
+        input { flex:1; background:#000; border:1px solid #333; color:#0f0; padding:10px; outline:none; }
+        .btn { padding:0 15px; background:var(--accent); border:none; color:#fff; cursor:pointer; }
+        #blocker-msg { position: absolute; bottom: 85px; width: 100%; text-align: center; color: #ffaa00; font-size: 11px; display: none; }
     </style>
 </head>
 <body>
-
     <div id="selector-screen">
-        <div class="selector-title">SELECT AGENT TO INITIALIZE AMADEUS</div>
+        <div style="font-size: 26px; margin-bottom: 50px; color: var(--accent);">AMADEUS AGENT DATABASE</div>
         <div class="agent-list">
             <div class="agent-card" onclick="initAgent('Makise_Kurisu')">
                 <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg">
                 <div class="agent-name">MAKISE KURISU</div>
             </div>
-            </div>
+        </div>
     </div>
-
-    <div id="nixie-clock">00:00 - 00/00</div>
-
+    <div id="nixie-clock">00:00:00 - 00/00/0000</div>
     <div class="chat-container" id="draggable">
         <div class="header" id="drag-handle">
             <img id="active-profile" src="" class="avatar">
             <div><strong>AMADEUS CORE</strong><br><small id="agent-display-name">---</small></div>
+            <div class="voice-controls">
+                <button id="voice-btn" class="v-btn" onclick="toggleVoice()">VOICE ENGINE: OFF</button>
+                <button id="kill-btn" class="v-btn" style="color:#f44; border-color:#522;" onclick="killGVC()">KILL ENGINE</button>
+            </div>
         </div>
         <div class="messages" id="box"></div>
+        <div id="blocker-msg">INITIALIZING VOICE CORE... PLEASE WAIT.</div>
         <div class="input-area">
-            <input type="text" id="inp" placeholder="Waiting for input..." autocomplete="off">
+            <input type="text" id="inp" placeholder="Ready..." autocomplete="off">
             <button class="btn" id="mic">🎤</button>
             <button class="btn" id="send">➤</button>
         </div>
     </div>
 
-    <div id="modal" class="modal"><img id="modal-img" src="" class="modal-content"></div>
-
     <script>
-        // --- 1. TÜRKİYE SAATİ (TR) ---
+        let currentAgent = "", voiceEnabled = false, isConnecting = false, mediaRecorder = null, chunks = [], micStream = null;
+        const box = document.getElementById('box'), inp = document.getElementById('inp'), voiceBtn = document.getElementById('voice-btn');
+        const blocker = document.getElementById('blocker-msg'), micBtn = document.getElementById('mic'), sendBtn = document.getElementById('send');
+
         function updateClock() {
             const now = new Date();
-            const options = { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', hour12: false };
-            const formatter = new Intl.DateTimeFormat('tr-TR', options).formatToParts(now);
-            
-            const parts = {};
-            formatter.forEach(p => parts[p.type] = p.value);
-            
-            document.getElementById('nixie-clock').textContent = `${parts.hour}:${parts.minute} - ${parts.day}/${parts.month}`;
+            document.getElementById('nixie-clock').textContent = now.toLocaleTimeString('tr-TR') + " - " + now.toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric'});
         }
         setInterval(updateClock, 1000); updateClock();
 
-        // --- 2. AJAN BAŞLATMA ---
-        function initAgent(agentFolder) {
-            const baseUrl = `http://127.0.0.1:5000/uigrounds/${agentFolder}`;
-            
-            // Arka plan ve Profil ayarla
+        async function initMic() {
+            try {
+                if (!micStream) { micStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+                return true;
+            } catch (e) { return false; }
+        }
+
+        async function initAgent(agent) {
+            currentAgent = agent;
+            const baseUrl = `http://127.0.0.1:5000/uigrounds/${agent}`;
             document.body.style.backgroundImage = `url('${baseUrl}/background.jpg')`;
             document.getElementById('active-profile').src = `${baseUrl}/profile.jpg`;
-            document.getElementById('modal-img').src = `${baseUrl}/profile.jpg`;
-            document.getElementById('agent-display-name').textContent = agentFolder.replace('_', ' ');
-
-            // Ekranları değiştir
+            document.getElementById('agent-display-name').textContent = agent.replace('_', ' ');
             document.getElementById('selector-screen').style.display = 'none';
             document.getElementById('draggable').style.display = 'flex';
+            await initMic(); loadHistory();
         }
 
-        // --- 3. SÜRÜKLEME VE CHAT (AMADEUS STANDART) ---
-        const dragItem = document.getElementById('draggable'), dragHandle = document.getElementById('drag-handle');
-        let isDragging = false, startX, startY, initialLeft, initialTop;
+        async function toggleVoice() {
+            if (isConnecting) return;
+            if (!voiceEnabled) {
+                isConnecting = true; voiceBtn.textContent = 'BOOTING...';
+                inp.disabled = true; micBtn.disabled = true; sendBtn.disabled = true; blocker.style.display = 'block';
+                const res = await fetch('http://127.0.0.1:5000/api/gvc/start', {method:'POST'});
+                if (res.ok) { voiceEnabled = true; voiceBtn.className = 'v-btn on'; voiceBtn.textContent = 'VOICE ENGINE: ON'; }
+                isConnecting = false; inp.disabled = false; micBtn.disabled = false; sendBtn.disabled = false; blocker.style.display = 'none';
+            } else { voiceEnabled = false; voiceBtn.className = 'v-btn'; voiceBtn.textContent = 'VOICE ENGINE: OFF'; }
+        }
 
-        dragHandle.onmousedown = (e) => {
-            isDragging = true; const r = dragItem.getBoundingClientRect();
-            initialLeft = r.left; initialTop = r.top; startX = e.clientX; startY = e.clientY;
-            dragItem.style.transform = 'none'; dragItem.style.left = initialLeft + 'px'; dragItem.style.top = initialTop + 'px'; dragItem.style.margin = '0';
+        async function killGVC() {
+            await fetch('http://127.0.0.1:5000/api/gvc/kill', {method:'POST'});
+            voiceEnabled = false; voiceBtn.className = 'v-btn'; voiceBtn.textContent = 'VOICE ENGINE: OFF';
+            alert("Engine Killed.");
+        }
+
+        function typeWriter(element, text, audioUrl, i = 0) {
+            if (i === 0 && audioUrl && voiceEnabled) {
+                const a = new Audio(audioUrl);
+                a.play().catch(e => console.log("Audio blocked."));
+            }
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i); box.scrollTop = box.scrollHeight;
+                setTimeout(() => typeWriter(element, text, audioUrl, i + 1), 25);
+            } else { document.getElementById('active-profile').classList.remove('thinking'); }
+        }
+
+        function appendMsg(msg, isHistory, audioUrl) {
+            const bDiv = document.createElement('div'); bDiv.className = `msg-box ${msg.role==='user'?'user-box':'ai-box'}`;
+            const cDiv = document.createElement('div'); cDiv.className = `msg ${msg.role==='user'?'user-msg':'ai-msg'}`;
+            const tDiv = document.createElement('div'); tDiv.className = 'ts'; tDiv.textContent = msg.timestamp || "";
+            if (msg.role === 'assistant' && !isHistory) {
+                document.getElementById('active-profile').classList.add('thinking');
+                typeWriter(cDiv, msg.content, audioUrl);
+            } else { cDiv.textContent = msg.content; }
+            bDiv.appendChild(cDiv); bDiv.appendChild(tDiv); box.appendChild(bDiv); box.scrollTop = box.scrollHeight;
+        }
+
+        async function talk(txt = null) {
+            const v = txt || inp.value.trim(); if(!v) return; if(!txt) inp.value = '';
+            appendMsg({role:'user', content:v, timestamp: new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}, true);
+            const res = await fetch('http://127.0.0.1:5000/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:v, agent:currentAgent, voice_enabled: voiceEnabled})});
+            const d = await res.json(); appendMsg(d.history[d.history.length-1], false, d.audio_url);
+        }
+
+        micBtn.onclick = async () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                if (!micStream) await initMic();
+                mediaRecorder = new MediaRecorder(micStream);
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    const fd = new FormData();
+                    fd.append('audio', new Blob(chunks, {type:'audio/webm'}));
+                    fd.append('agent', currentAgent); fd.append('voice_enabled', voiceEnabled);
+                    chunks = [];
+                    const res = await fetch('http://127.0.0.1:5000/api/voice_chat', {method:'POST', body:fd});
+                    const d = await res.json();
+                    if (d.user_text) appendMsg({role:'user', content:d.user_text}, true);
+                    if (d.reply) appendMsg({role:'assistant', content:d.reply}, false, d.audio_url);
+                };
+                mediaRecorder.start(); micBtn.style.background = 'red';
+            } else { mediaRecorder.stop(); micBtn.style.background = ''; }
+        };
+
+        async function loadHistory() {
+            const res = await fetch(`http://127.0.0.1:5000/api/history?agent=${currentAgent}`);
+            const d = await res.json(); box.innerHTML = ''; d.history.forEach(m => appendMsg(m, true));
+        }
+
+        const dItem = document.getElementById('draggable'), dHandle = document.getElementById('drag-handle');
+        let isD = false, sX, sY, iL, iT;
+        dHandle.onmousedown = (e) => {
+            isD = true; const r = dItem.getBoundingClientRect(); iL = r.left; iT = r.top; sX = e.clientX; sY = e.clientY;
+            dItem.style.transform = 'none'; dItem.style.left = iL + 'px'; dItem.style.top = iT + 'px';
         };
         document.onmousemove = (e) => {
-            if (!isDragging) return;
-            let nL = initialLeft + (e.clientX - startX), nT = initialTop + (e.clientY - startY);
-            const wW = window.innerWidth, wH = window.innerHeight, cW = dragItem.offsetWidth, cH = dragItem.offsetHeight;
+            if (!isD) return;
+            let nL = iL + (e.clientX - sX), nT = iT + (e.clientY - sY);
+            const wW = window.innerWidth, wH = window.innerHeight, cW = dItem.offsetWidth, cH = dItem.offsetHeight;
             if (nL < 0) nL = 0; if (nL + cW > wW) nL = wW - cW;
             if (nT < 0) nT = 0; if (nT + cH > wH) nT = wH - cH;
-            dragItem.style.left = nL + 'px'; dragItem.style.top = nT + 'px';
+            dItem.style.left = nL + 'px'; dItem.style.top = nT + 'px';
         };
-        document.onmouseup = () => isDragging = false;
-
-        const box = document.getElementById('box'), inp = document.getElementById('inp');
-        async function talk(t = null) {
-            const v = t || inp.value.trim(); if(!v) return;
-            if(!t) inp.value = '';
-            const res = await fetch('http://127.0.0.1:5000/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:v})});
-            const d = await res.json(); render(d.history);
-        }
-        function render(h) {
-            box.innerHTML = h.map(m => `<div class="msg ${m.role === 'user' ? 'user' : 'ai'}">${m.content}</div>`).join('');
-            box.scrollTop = box.scrollHeight;
-        }
-
-        let mr, chunks = [];
-        document.getElementById('mic').onclick = async () => {
-            if (!mr || mr.state === 'inactive') {
-                const s = await navigator.mediaDevices.getUserMedia({audio:true});
-                mr = new MediaRecorder(s);
-                mr.onstop = async () => {
-                    const fd = new FormData(); fd.append('audio', new Blob(chunks, {type:'audio/webm'}));
-                    chunks = []; const res = await fetch('http://127.0.0.1:5000/api/voice_chat', {method:'POST', body:fd});
-                    const d = await res.json(); render(d.history);
-                    if(d.audio_url) new Audio(d.audio_url).play();
-                };
-                mr.ondataavailable = e => chunks.push(e.data); mr.start();
-                document.getElementById('mic').style.background='red';
-            } else { mr.stop(); document.getElementById('mic').style.background=''; }
-        };
-
-        document.getElementById('active-profile').onclick = () => document.getElementById('modal').style.display='flex';
-        document.getElementById('modal').onclick = () => document.getElementById('modal').style.display='none';
-        document.getElementById('send').onclick = () => talk();
-        inp.onkeypress = e => { if(e.key === 'Enter') talk(); };
-        window.onload = async () => { const res = await fetch('http://127.0.0.1:5000/api/history'); const d = await res.json(); render(d.history); };
+        document.onmouseup = () => isD = false;
+        sendBtn.onclick = () => talk();
+        inp.onkeypress = e => { if(e.key==='Enter') talk(); };
     </script>
 </body>
 </html>
