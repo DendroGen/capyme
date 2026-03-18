@@ -1,171 +1,134 @@
-import yaml
-import json
-import os
-import sys
-import uuid
-from pathlib import Path
-from openai import OpenAI
+import yaml, json, os, sys, uuid, subprocess
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from openai import OpenAI
 from faster_whisper import WhisperModel
 
-# --- SİHİRLİ DOKUNUŞ: Terminal nerede olursa olsun kendini hep ana klasörde sayacak ---
+# --- Klasör Ayarları ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../.."))
 sys.path.append(SERVER_DIR)
-os.chdir(SERVER_DIR)  # <-- BU SATIR HER ŞEYİ ÇÖZÜYOR
+os.chdir(SERVER_DIR)
 
-# Şimdi diğer dosyalarını güvenle çağırabiliriz
+# --- GSV2 Başlatıcı ---
+GSV2_PATH = r"C:\SVG\GSv2pro"
+
+
+def start_gsv2():
+    print("--- [SİSTEM] Amadeus Voice Core Başlatılıyor ---")
+    cmd = f'start cmd /k "cd /d {GSV2_PATH} && runtime\\python.exe api_v2.py -a 127.0.0.1 -p 9880"'
+    os.system(cmd)
+
+
 from process.tts_func.sovits_ping import sovits_gen
 
-print("Config ve Whisper Yükleniyor. Lütfen bekleyin...")
-# ... (Kodun geri kalanı aynı kalacak) ...
 with open("character_config.yaml", "r", encoding="utf-8") as f:
-    char_config = yaml.safe_load(f)
+    cfg = yaml.safe_load(f)
 
+# Ollama Bağlantısı
 client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+MODEL = cfg.get("model", "llama3")
+# Whisper Modelini Başlat (Düzgün isimlendirme)
+whisper_engine = WhisperModel("base.en", device="cpu", compute_type="float32")
 
-HISTORY_FILE = char_config.get("history_file", "chat_history.json")
-MODEL = char_config.get("model", "llama3")
-
-whisper_model = WhisperModel("base.en", device="cpu", compute_type="float32")
-
-SYSTEM_TEXT = char_config["presets"]["default"]["system_prompt"]
-SYSTEM_PROMPT = [{"role": "system", "content": SYSTEM_TEXT}]
-
-
-# --- Hafıza (Memory) Fonksiyonları ---
-def load_history():
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return SYSTEM_PROMPT.copy()
-
-
-def save_history(history):
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(history, f, indent=2, ensure_ascii=False)
-
-
-# Siteye SADECE konuşmaları gönderir (System promptunu gizler ve Index ekler)
-def get_chat_history_only():
-    messages = load_history()
-    return [
-        {"role": m["role"], "content": m["content"], "index": i}
-        for i, m in enumerate(messages)
-        if m["role"] != "system"
-    ]
-
-
-def llm_response(user_input, edit_index=None):
-    messages = load_history()
-
-    # EĞER DÜZENLEME (EDIT) YAPILIYORSA:
-    # Verilen index'ten sonrasını (JSON'dan) tamamen siler.
-    if edit_index is not None:
-        try:
-            edit_index = int(edit_index)
-            if 0 < edit_index < len(messages):
-                messages = messages[:edit_index]
-        except ValueError:
-            pass
-
-    messages.append({"role": "user", "content": user_input})
-
-    response = client.chat.completions.create(
-        model=MODEL, messages=messages, temperature=0.7, max_tokens=2048
-    )
-
-    ai_text = response.choices[0].message.content
-
-    messages.append({"role": "assistant", "content": ai_text})
-    save_history(messages)
-
-    return ai_text
-
-
-# --- Flask Sunucusu ---
 app = Flask(__name__)
 CORS(app)
-
 AUDIO_DIR = os.path.join(SERVER_DIR, "audio")
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
 
-# Site açıldığında eski sohbeti yükler
-@app.route("/api/history", methods=["GET"])
-def history_endpoint():
-    return jsonify({"history": get_chat_history_only()})
+def process_logic(user_text, edit_idx=None):
+    hist = []
+    if os.path.exists("chat_history.json"):
+        with open("chat_history.json", "r", encoding="utf-8") as f:
+            hist = json.load(f)
+    else:
+        hist = [
+            {"role": "system", "content": cfg["presets"]["default"]["system_prompt"]}
+        ]
+
+    if edit_idx:
+        hist = hist[: int(edit_idx)]
+
+    if user_text.strip():
+        hist.append({"role": "user", "content": user_text})
+
+    resp = client.chat.completions.create(model=MODEL, messages=hist)
+    ai_msg = resp.choices[0].message.content
+    hist.append({"role": "assistant", "content": ai_msg})
+
+    with open("chat_history.json", "w", encoding="utf-8") as f:
+        json.dump(hist, f, indent=2, ensure_ascii=False)
+
+    return ai_msg, [m for m in hist if m["role"] != "system"]
 
 
-# Normal Yazı Sohbeti
+@app.route("/api/history")
+def history():
+    # Boş mesaj göndermeden sadece geçmişi oku
+    hist = []
+    if os.path.exists("chat_history.json"):
+        with open("chat_history.json", "r", encoding="utf-8") as f:
+            hist = json.load(f)
+    return jsonify({"history": [m for m in hist if m["role"] != "system"]})
+
+
 @app.route("/api/chat", methods=["POST"])
-def chat_endpoint():
-    try:
-        data = request.json
-        user_text = data.get("message")
-        edit_index = data.get("edit_index")  # Düzenlenen mesajın sırası (Varsa)
-
-        ai_reply = llm_response(user_text, edit_index)
-
-        return jsonify({"reply": ai_reply, "history": get_chat_history_only()})
-    except Exception as e:
-        print(f"\n[!!!] TEXT CHAT HATASI: {str(e)}\n")
-        return jsonify({"reply": f"Error: {str(e)}"}), 500
+def chat():
+    d = request.json
+    reply, hist = process_logic(d.get("message"), d.get("edit_index"))
+    return jsonify({"reply": reply, "history": hist})
 
 
-# Sesli Sohbet
 @app.route("/api/voice_chat", methods=["POST"])
-def voice_chat_endpoint():
+def voice_chat():
     try:
-        if "audio" not in request.files:
-            return jsonify({"error": "Ses dosyası alınamadı"}), 400
-
         audio_file = request.files["audio"]
-        edit_index = request.form.get("edit_index")  # Düzenleme durumu
+        temp_path = os.path.join(AUDIO_DIR, f"in_{uuid.uuid4().hex}.webm")
+        audio_file.save(temp_path)
 
-        temp_audio_path = os.path.join(AUDIO_DIR, f"temp_user_{uuid.uuid4().hex}.webm")
-        audio_file.save(temp_audio_path)
-
-        segments, _ = whisper_model.transcribe(temp_audio_path)
-        user_text = "".join([segment.text for segment in segments]).strip()
-
-        if os.path.exists(temp_audio_path):
-            os.remove(temp_audio_path)
+        segments, _ = whisper_engine.transcribe(temp_path)
+        user_text = "".join([s.text for s in segments]).strip()
+        os.remove(temp_path)
 
         if not user_text:
-            return jsonify({"error": "Ses anlaşılamadı."}), 400
+            return jsonify({"error": "Sessizlik algılandı"}), 400
 
-        ai_reply = llm_response(user_text, edit_index)
+        ai_reply, history_data = process_logic(
+            user_text, request.form.get("edit_index")
+        )
 
-        output_filename = f"reply_{uuid.uuid4().hex}.wav"
-        output_wav_path = os.path.join(AUDIO_DIR, output_filename)
-        sovits_gen(ai_reply, output_wav_path)
+        out_name = f"res_{uuid.uuid4().hex}.wav"
+        out_path = os.path.join(AUDIO_DIR, out_name)
+
+        # TTS Üretimi
+        success = sovits_gen(ai_reply, out_path)
+        audio_url = f"http://127.0.0.1:5000/audio/{out_name}" if success else None
 
         return jsonify(
             {
                 "user_text": user_text,
                 "reply": ai_reply,
-                "audio_url": f"http://127.0.0.1:5000/audio/{output_filename}",
-                "history": get_chat_history_only(),
+                "history": history_data,
+                "audio_url": audio_url,
             }
         )
-
     except Exception as e:
-        print(f"\n[!!!] VOICE CHAT HATASI: {str(e)}\n")
+        print(f"--- [SERVER ERROR] {e} ---")
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/audio/<filename>")
-def serve_audio(filename):
-    return send_from_directory(AUDIO_DIR, filename)
+@app.route("/audio/<f>")
+def serve(f):
+    return send_from_directory(AUDIO_DIR, f)
+
+
+@app.route("/api/gsv2/toggle", methods=["POST"])
+def toggle():
+    # Basit bir tetikleme (GSV2 zaten başlangıçta açılıyor)
+    return jsonify({"status": "open"})
 
 
 if __name__ == "__main__":
-    print("==================================================")
-    print(" Kurisu Web & Ses Sunucusu Aktif! (Port 5000) ")
-    print("==================================================")
+    start_gsv2()
     app.run(port=5000)

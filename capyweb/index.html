@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AMADEUS System - Makise Kurisu</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --panel: rgba(20, 20, 25, 0.95);
+            --accent: #a10000; /* Amadeus Red */
+            --text: #e0e0e0;
+        }
+        body {
+            margin: 0; background: var(--bg) url('backgrounds/background.jpg') center/cover fixed;
+            display: flex; justify-content: center; align-items: center; height: 100vh;
+            font-family: 'Consolas', monospace; color: var(--text); overflow: hidden;
+        }
+        .chat-container {
+            width: 450px; height: 85vh; background: var(--panel); border: 1px solid var(--accent);
+            border-radius: 10px; display: flex; flex-direction: column; box-shadow: 0 0 20px var(--accent);
+        }
+        .chat-header {
+            padding: 15px; background: rgba(161, 0, 0, 0.2); border-bottom: 1px solid var(--accent);
+            display: flex; align-items: center; gap: 15px;
+        }
+        .header-avatar { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--accent); }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--accent); }
+        .message { padding: 12px; border-radius: 5px; max-width: 80%; font-size: 0.9rem; line-height: 1.4; }
+        .user-msg { align-self: flex-end; background: var(--accent); color: white; }
+        .ai-msg { align-self: flex-start; background: #1a1a1a; border-left: 3px solid var(--accent); }
+        .input-area { padding: 20px; display: flex; gap: 10px; background: rgba(0,0,0,0.5); }
+        input { flex: 1; background: #000; border: 1px solid var(--accent); padding: 10px; color: #0f0; border-radius: 5px; outline: none; }
+        .btn { background: var(--accent); border: none; color: white; cursor: pointer; padding: 10px; border-radius: 5px; transition: 0.3s; }
+        .btn:hover { background: #ff0000; box-shadow: 0 0 10px #ff0000; }
+        #status { text-align: center; font-size: 0.7rem; color: var(--accent); padding: 5px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <img src="profiles/profile.jpg" class="header-avatar">
+            <div><strong>AMADEUS v1.0</strong><br><small>Makise Kurisu</small></div>
+        </div>
+        <div class="chat-messages" id="chat-box"></div>
+        <div id="status">CONNECTING TO NEURAL NETWORK...</div>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Enter command..." autocomplete="off">
+            <button class="btn" id="mic-btn">🎤</button>
+            <button class="btn" id="send-btn">SEND</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box'), userInput = document.getElementById('user-input');
+        let editIdx = null, idleTimer;
+
+        function appendMsg(text, role, idx) {
+            const msg = document.createElement('div');
+            msg.className = `message ${role === 'user' ? 'user-msg' : 'ai-msg'}`;
+            msg.textContent = text;
+            chatBox.appendChild(msg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendAction(text = null) {
+            const content = text || userInput.value.trim();
+            if(!content) return;
+            if(!text) userInput.value = '';
+            
+            document.getElementById('status').style.display = 'block';
+            const res = await fetch('http://127.0.0.1:5000/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message: content, edit_index: editIdx })
+            });
+            const data = await res.json();
+            renderHistory(data.history);
+            document.getElementById('status').style.display = 'none';
+            resetIdleTimer();
+        }
+
+        function renderHistory(history) {
+            chatBox.innerHTML = '';
+            history.forEach((m, i) => appendMsg(m.content, m.role, i + 1));
+        }
+
+        // SESLİ MESAJ
+        let mediaRecorder, chunks = [];
+        document.getElementById('mic-btn').onclick = async () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.onstop = async () => {
+                    const fd = new FormData();
+                    fd.append('audio', new Blob(chunks, {type: 'audio/webm'}));
+                    chunks = [];
+                    document.getElementById('status').style.display = 'block';
+                    const res = await fetch('http://127.0.0.1:5000/api/voice_chat', {method: 'POST', body: fd});
+                    const data = await res.json();
+                    renderHistory(data.history);
+                    if (data.audio_url) new Audio(data.audio_url).play();
+                    document.getElementById('status').style.display = 'none';
+                };
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.start();
+                document.getElementById('mic-btn').style.background = 'red';
+            } else {
+                mediaRecorder.stop();
+                document.getElementById('mic-btn').style.background = '';
+            }
+        };
+
+        // F11 TAM EKRAN
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+            }
+        });
+
+        // 1 SAATLİK OTO PİNG
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => sendAction("(Amadeus system notice: User has been silent for 1 hour. Start a conversation.)"), 3600000);
+        }
+
+        document.getElementById('send-btn').onclick = () => sendAction();
+        userInput.onkeypress = e => { if(e.key === 'Enter') sendAction(); };
+        window.onload = async () => {
+            const res = await fetch('http://127.0.0.1:5000/api/history');
+            const data = await res.json();
+            renderHistory(data.history);
+            resetIdleTimer();
+        };
+    </script>
+</body>
+</html>
