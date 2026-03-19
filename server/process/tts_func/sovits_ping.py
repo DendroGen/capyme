@@ -3,7 +3,7 @@ import requests, yaml, os
 
 def sovits_gen(text, output_path):
     try:
-        config_path = os.path.join(os.getcwd(), "character_config.yaml")
+        config_path = os.path.join(os.getcwd(), "agents_config.yaml")
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)["sovits_ping_config"]
 

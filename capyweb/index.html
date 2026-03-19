@@ -2,77 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AMADEUS OS v2.2 - MULTI AGENT</title>
-    <style>
-        /* CSS DEĞİŞKENLERİ: JS ile anında ajana göre değişecek */
-        :root { 
-            --bg: #050505; 
-            --panel: rgba(15, 10, 10, 0.98); 
-            --accent: #a10000; 
-            --nixie: #ff4400; 
-            --green: #00ff41;
-            --user-txt: #ffffff; /* Senin mesajlarının yazı rengi */
-            --glow: rgba(161, 0, 0, 0.3); /* Etrafındaki parlama */
-        }
-        
-        body { margin: 0; background: var(--bg); font-family: 'Consolas', monospace; height: 100vh; color: #eee; overflow: hidden; background-size: cover; background-position: center; transition: background-image 1s ease-in-out; }
-        #nixie-clock { position: fixed; top: 15px; right: 20px; font-size: 16px; color: var(--nixie); background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 4px; border: 1px solid #441100; box-shadow: 0 0 10px rgba(255, 68, 0, 0.3); z-index: 100; }
-        
-        #selector-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .agent-list { display: flex; gap: 40px; }
-        .agent-card { width: 240px; height: 350px; background: #0a0a0a; border: 2px solid #333; border-radius: 10px; cursor: pointer; transition: 0.4s; overflow: hidden; position: relative; }
-        .agent-card:hover { border-color: var(--card-accent); transform: scale(1.05); box-shadow: 0 0 20px var(--card-glow); }
-        .agent-card img { width: 100%; height: 280px; object-fit: cover; }
-        .agent-name { padding: 15px; text-align: center; font-weight: bold; background: rgba(0, 0, 0, 0.8); color: var(--card-accent); border-top: 1px solid var(--card-accent); }
-
-        .chat-container { width:450px; height:650px; background: var(--panel); border: 1px solid var(--accent); border-radius:12px; display:none; flex-direction:column; box-shadow: 0 0 30px var(--glow); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; overflow: hidden; transition: 0.5s; }
-        .header { padding:12px; background:rgba(0,0,0,0.4); border-bottom:1px solid var(--accent); display:flex; align-items:center; gap:12px; cursor: move; position: relative; z-index: 15; }
-        
-        .avatar { width:45px; height:45px; border-radius:50%; border:2px solid var(--accent); object-fit: cover; cursor: pointer; transition: 0.4s ease-in-out; position: relative; z-index: 150; }
-        .avatar.zoomed { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 250px; height: 250px; border-radius: 15px; box-shadow: 0 0 80px rgba(0, 0, 0, 0.95); border: 2px solid var(--accent); z-index: 9999; }
-        .avatar.thinking { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 5px var(--accent); } 50% { box-shadow: 0 0 20px var(--accent); } 100% { box-shadow: 0 0 5px var(--accent); } }
-
-        #emotion-panel-bg { position: absolute; top: 65px; left: 0; width: 100%; height: calc(100% - 145px); object-fit: cover; z-index: 1; opacity: 0; pointer-events: none; transition: opacity 0.5s; }
-        .messages { flex:1; padding:15px; overflow-y:auto; display:flex; flex-direction: column; gap:12px; position: relative; z-index: 5; background: transparent; }
-        .messages::-webkit-scrollbar { width:3px; }
-        .messages::-webkit-scrollbar-thumb { background: var(--accent); }
-        .msg-box { display: flex; flex-direction: column; max-width: 85%; }
-        .msg { padding:10px; border-radius:8px; font-size:13.5px; line-height:1.4; }
-        .user-box { align-self: flex-end; } .ai-box { align-self: flex-start; }
-        
-        /* Kullanıcı mesajları ve AI mesajları dinamik renklere bağlandı */
-        .user-msg { background: var(--accent); color: var(--user-txt); font-weight: 500; } 
-        .ai-msg { background: rgba(15, 15, 15, 0.85); border-left: 3px solid var(--accent); color: #eee; }
-        
-        .emotion-fade-anim { animation: emotionFade 15s forwards; }
-        @keyframes emotionFade { 0% { opacity: 0.85; } 100% { opacity: 0; } }
-
-        .ts { font-size: 9px; color: #777; margin-top: 3px; align-self: flex-end; }
-        .input-area { padding:15px; display:flex; gap:8px; background:rgba(0,0,0,0.9); border-radius: 0 0 12px 12px; position: relative; z-index: 25; border-top: 1px solid rgba(255,255,255,0.05); }
-        input { flex:1; background:#050505; border:1px solid #333; color:#eee; padding:10px; outline:none; border-radius: 4px; transition: 0.3s; }
-        input:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(255,255,255,0.05); }
-        .btn { padding:0 15px; background:var(--accent); border:none; color:var(--user-txt); font-weight: bold; cursor:pointer; border-radius: 4px; transition: 0.3s; }
-        .btn:hover { filter: brightness(1.2); }
-        
-        .v-btn { background: #222; border: 1px solid #444; color: #777; font-size: 9px; padding: 3px 6px; cursor: pointer; text-align: center; border-radius: 3px; }
-        .v-btn.on { border-color: var(--green); color: var(--green); box-shadow: 0 0 8px var(--green); }
-        .voice-controls { position: absolute; top: 8px; right: 12px; display: flex; flex-direction: column; gap: 4px; }
-        #blocker-msg { position: absolute; bottom: 85px; width: 100%; text-align: center; color: #ffaa00; font-size: 11px; display: none; z-index: 100; }
-        
-        .disabled-btn { background: #1a1a1a !important; color: #444 !important; border-color: #222 !important; cursor: not-allowed !important; box-shadow: none !important; }
-    </style>
+    <title>AMADEUS OS v4.1 - UNIFIED HD CORE</title>
+    <link rel="stylesheet" href="css/amadeus.css">
 </head>
 <body>
+
     <div id="selector-screen">
-        <div style="font-size: 26px; margin-bottom: 50px; color: #eee; letter-spacing: 2px;">AMADEUS AGENT DATABASE</div>
+        <div class="db-title">AMADEUS AGENT DATABASE</div>
         <div class="agent-list">
-            <div class="agent-card" style="--card-accent: #a10000; --card-glow: rgba(161,0,0,0.4);" onclick="initAgent('Makise_Kurisu')">
-                <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg" onerror="this.src='https://via.placeholder.com/240x280/111/a10000?text=Kurisu'">
+            <div class="agent-card" style="--card-accent: #a10000; --card-glow: rgba(161,0,0,0.6);" onclick="initAgent('Makise_Kurisu')">
+                <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg" onerror="this.src='https://via.placeholder.com/260x300/111/a10000?text=Kurisu'">
                 <div class="agent-name">MAKISE KURISU</div>
             </div>
-            <div class="agent-card" style="--card-accent: #90e0ef; --card-glow: rgba(144,224,239,0.4);" onclick="initAgent('Winter_Agent')">
-                <img src="http://127.0.0.1:5000/uigrounds/Winter_Agent/profile.jpg" onerror="this.src='https://via.placeholder.com/240x280/111/90e0ef?text=Winter+Agent'">
+            <div class="agent-card" style="--card-accent: #90e0ef; --card-glow: rgba(144,224,239,0.6);" onclick="initAgent('Winter_Agent')">
+                <img src="http://127.0.0.1:5000/uigrounds/Winter_Agent/profile.jpg" onerror="this.src='https://via.placeholder.com/260x300/111/90e0ef?text=Winter+Agent'">
                 <div class="agent-name">WINTER AGENT</div>
             </div>
         </div>
@@ -82,194 +25,32 @@
     
     <div class="chat-container" id="draggable">
         <div class="header" id="drag-handle">
-            <img id="active-profile" src="" class="avatar" onclick="this.classList.toggle('zoomed')">
-            <div><strong style="color: var(--accent);">AMADEUS CORE</strong><br><small id="agent-display-name">---</small></div>
+            <div class="header-left">
+                <img id="active-profile" src="" class="avatar" onclick="this.classList.toggle('zoomed')">
+                <div><strong style="color: var(--accent); font-size:16px;">AMADEUS CORE</strong><br><small id="agent-display-name" style="color:#aaa;">---</small></div>
+            </div>
             <div class="voice-controls">
-                <button id="voice-btn" class="v-btn" onclick="toggleVoice()">VOICE ENGINE: OFF</button>
-                <button id="kill-btn" class="v-btn" style="color:#f44; border-color:#522;" onclick="killGVC()">KILL ENGINE</button>
+                <button id="voice-btn" class="v-btn" onclick="toggleVoice()">SES MOTORU: KAPALI</button>
+                <button id="kill-btn" class="v-btn" style="background: #200; color:#f44; border: 1px solid #522;" onclick="killGVC()">MOTORU DURDUR</button>
+                <button class="shift-btn" onclick="worldlineShift()">SAPMA KAYMASI</button>
             </div>
         </div>
         <img id="emotion-panel-bg" src="">
         <div class="messages" id="box"></div>
         <div id="blocker-msg">INITIALIZING VOICE CORE... PLEASE WAIT.</div>
+        
+        <div id="paste-preview-container">
+            <button class="remove-img-btn" onclick="removePastedImage()">X</button>
+            <img id="paste-preview-img" src="">
+        </div>
+
         <div class="input-area">
-            <input type="text" id="inp" placeholder="Ready..." autocomplete="off">
+            <input type="text" id="inp" placeholder="Mesaj göndererek veya Ctrl+V ile resmi yapıştırarak..." autocomplete="off">
             <button class="btn" id="mic">🎤</button>
             <button class="btn" id="send">➤</button>
         </div>
     </div>
 
-    <script>
-        // --- AJAN RENK VE TEMA KONFİGÜRASYONU ---
-        const AgentConfigs = {
-            'Makise_Kurisu': {
-                displayName: 'MAKISE KURISU',
-                themeAccent: '#a10000', // Klasik Kırmızı
-                themePanel: 'rgba(15, 5, 5, 0.96)',
-                themeGlow: 'rgba(161, 0, 0, 0.25)',
-                userTxt: '#ffffff', // Kırmızı üstüne beyaz yazı
-                voiceSupported: true
-            },
-            'Winter_Agent': {
-                displayName: 'WINTER AGENT',
-                themeAccent: '#90e0ef', // Soft Buz Mavisi
-                themePanel: 'rgba(8, 14, 22, 0.96)', // Koyu ve soğuk lacivert arka plan
-                themeGlow: 'rgba(144, 224, 239, 0.15)', // Mavi parlama
-                userTxt: '#02182b', // Açık buz mavisi üstüne koyu lacivert okunaklı yazı
-                voiceSupported: false // Ses BLOKE edildi
-            }
-        };
-
-        let currentAgent = "", voiceEnabled = false, isConnecting = false, mediaRecorder = null, chunks = [], micStream = null;
-        const box = document.getElementById('box'), inp = document.getElementById('inp'), voiceBtn = document.getElementById('voice-btn');
-        const blocker = document.getElementById('blocker-msg'), micBtn = document.getElementById('mic'), sendBtn = document.getElementById('send');
-        const emotionBg = document.getElementById('emotion-panel-bg');
-
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('nixie-clock').textContent = now.toLocaleTimeString('tr-TR') + " - " + now.toLocaleDateString('tr-TR', {day:'2-digit', month:'2-digit', year:'numeric'});
-        }
-        setInterval(updateClock, 1000); updateClock();
-
-        async function initAgent(agentKey) {
-            currentAgent = agentKey;
-            const cfg = AgentConfigs[agentKey];
-            const baseUrl = `http://127.0.0.1:5000/uigrounds/${agentKey}`;
-            
-            // CSS DEĞİŞKENLERİNİ AJANA GÖRE GÜNCELLE
-            document.documentElement.style.setProperty('--accent', cfg.themeAccent);
-            document.documentElement.style.setProperty('--panel', cfg.themePanel);
-            document.documentElement.style.setProperty('--glow', cfg.themeGlow);
-            document.documentElement.style.setProperty('--user-txt', cfg.userTxt);
-
-            // SES BLOKESİ (Winter Agent için butonlar kapanır)
-            if (!cfg.voiceSupported) {
-                voiceBtn.classList.add('disabled-btn');
-                voiceBtn.textContent = "VOICE: BLOCKED";
-                micBtn.classList.add('disabled-btn');
-                document.getElementById('kill-btn').style.display = 'none'; // Kill butonunu da gizle
-            } else {
-                voiceBtn.classList.remove('disabled-btn');
-                voiceBtn.textContent = "VOICE ENGINE: OFF";
-                micBtn.classList.remove('disabled-btn');
-                document.getElementById('kill-btn').style.display = 'block';
-            }
-
-            new Audio('http://127.0.0.1:5000/sounds/systemopen.wav').play().catch(e => {});
-
-            document.body.style.backgroundImage = `url('${baseUrl}/background.jpg')`;
-            document.getElementById('active-profile').src = `${baseUrl}/profile.jpg`;
-            document.getElementById('agent-display-name').textContent = cfg.displayName;
-            
-            document.getElementById('selector-screen').style.display = 'none';
-            document.getElementById('draggable').style.display = 'flex';
-            
-            loadHistory().catch(e => {});
-        }
-
-        // MİKROFON İZNİ SADECE BUTONA BASINCA İSTENECEK
-        async function initMic() { 
-            try { 
-                if (!micStream) { micStream = await navigator.mediaDevices.getUserMedia({audio:true}); } 
-                return true; 
-            } catch (e) { 
-                alert("Mikrofon izni reddedildi.");
-                return false; 
-            } 
-        }
-
-        function triggerEmotion(emotion) {
-            if (!emotion) return;
-            const baseUrl = `http://127.0.0.1:5000/uigrounds/${currentAgent}`;
-            emotionBg.src = `${baseUrl}/${emotion}.jpg`;
-            emotionBg.classList.remove('emotion-fade-anim');
-            void emotionBg.offsetWidth;
-            emotionBg.classList.add('emotion-fade-anim');
-        }
-
-        function typeWriter(element, text, audioUrl, i = 0) {
-            if (i === 0 && audioUrl && voiceEnabled && AgentConfigs[currentAgent].voiceSupported) { 
-                new Audio(audioUrl).play().catch(e => {}); 
-            }
-            if (i < text.length) {
-                element.textContent += text.charAt(i); box.scrollTop = box.scrollHeight;
-                setTimeout(() => typeWriter(element, text, audioUrl, i + 1), 25);
-            } else { document.getElementById('active-profile').classList.remove('thinking'); }
-        }
-
-        function appendMsg(msg, isHistory, audioUrl, emotion = null) {
-            const bDiv = document.createElement('div'); bDiv.className = `msg-box ${msg.role==='user'?'user-box':'ai-box'}`;
-            const cDiv = document.createElement('div'); cDiv.className = `msg ${msg.role==='user'?'user-msg':'ai-msg'}`;
-            const tDiv = document.createElement('div'); tDiv.className = 'ts'; tDiv.textContent = msg.timestamp || "";
-            if (msg.role === 'assistant' && !isHistory) {
-                document.getElementById('active-profile').classList.add('thinking');
-                triggerEmotion(emotion);
-                typeWriter(cDiv, msg.content, audioUrl);
-            } else { cDiv.textContent = msg.content; }
-            bDiv.appendChild(cDiv); bDiv.appendChild(tDiv); box.appendChild(bDiv); box.scrollTop = box.scrollHeight;
-        }
-
-        async function talk(txt = null) {
-            const v = txt || inp.value.trim(); if(!v) return; if(!txt) inp.value = '';
-            appendMsg({role:'user', content:v, timestamp: new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}, true);
-            const res = await fetch('http://127.0.0.1:5000/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:v, agent:currentAgent, voice_enabled: voiceEnabled})});
-            const d = await res.json(); 
-            appendMsg(d.history[d.history.length-1], false, d.audio_url, d.emotion);
-        }
-
-        micBtn.onclick = async () => {
-            if (!AgentConfigs[currentAgent].voiceSupported) return; 
-            
-            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-                const micGranted = await initMic();
-                if (!micGranted) return;
-
-                mediaRecorder = new MediaRecorder(micStream);
-                mediaRecorder.ondataavailable = e => chunks.push(e.data);
-                mediaRecorder.onstop = async () => {
-                    const fd = new FormData();
-                    fd.append('audio', new Blob(chunks, {type:'audio/webm'}));
-                    fd.append('agent', currentAgent); fd.append('voice_enabled', voiceEnabled);
-                    chunks = [];
-                    const res = await fetch('http://127.0.0.1:5000/api/voice_chat', {method:'POST', body:fd});
-                    const d = await res.json();
-                    if (d.user_text) appendMsg({role:'user', content:d.user_text}, true);
-                    if (d.reply) appendMsg(d.history[d.history.length-1], false, d.audio_url, d.emotion);
-                };
-                mediaRecorder.start(); micBtn.style.background = '#ff3333';
-            } else { mediaRecorder.stop(); micBtn.style.background = ''; }
-        };
-
-        async function loadHistory() {
-            const res = await fetch(`http://127.0.0.1:5000/api/history?agent=${currentAgent}`);
-            const d = await res.json(); if(d.history) { box.innerHTML = ''; d.history.forEach(m => appendMsg(m, true)); }
-        }
-
-        async function toggleVoice() {
-            if (!AgentConfigs[currentAgent].voiceSupported) return;
-            if (isConnecting) return;
-            if (!voiceEnabled) {
-                isConnecting = true; voiceBtn.textContent = 'BOOTING...';
-                inp.disabled = true; blocker.style.display = 'block';
-                const res = await fetch('http://127.0.0.1:5000/api/gvc/start', {method:'POST'});
-                if (res.ok) { voiceEnabled = true; voiceBtn.className = 'v-btn on'; voiceBtn.textContent = 'VOICE ENGINE: ON'; }
-                isConnecting = false; inp.disabled = false; blocker.style.display = 'none';
-            } else { voiceEnabled = false; voiceBtn.className = 'v-btn'; voiceBtn.textContent = 'VOICE ENGINE: OFF'; }
-        }
-
-        async function killGVC() {
-            await fetch('http://127.0.0.1:5000/api/gvc/kill', {method:'POST'});
-            voiceEnabled = false; voiceBtn.className = 'v-btn'; voiceBtn.textContent = 'VOICE ENGINE: OFF'; alert("Motor Durduruldu.");
-        }
-
-        const dItem = document.getElementById('draggable'), dHandle = document.getElementById('drag-handle');
-        let isD = false, sX, sY, iL, iT;
-        dHandle.onmousedown = (e) => { isD = true; const r = dItem.getBoundingClientRect(); iL = r.left; iT = r.top; sX = e.clientX; sY = e.clientY; dItem.style.transform = 'none'; dItem.style.left = iL + 'px'; dItem.style.top = iT + 'px'; };
-        document.onmousemove = (e) => { if (!isD) return; let nL = iL + (e.clientX - sX), nT = iT + (e.clientY - sY); dItem.style.left = nL + 'px'; dItem.style.top = nT + 'px'; };
-        document.onmouseup = () => isD = false;
-
-        sendBtn.onclick = () => talk();
-        inp.onkeypress = e => { if(e.key==='Enter') talk(); };
-    </script>
+    <script src="js/core.js"></script>
 </body>
 </html>
