@@ -5,62 +5,42 @@
   },
   {
     "role": "user",
-    "content": "h,",
-    "timestamp": "15:23:56"
-  },
-  {
-    "role": "assistant",
-    "content": "*Kurisu squints at you and crosses her arms*\n\n\"Ah, it's you. What do you want this time, idiot? You better have a good reason for interrupting my work.\"",
-    "timestamp": "15:23:57"
-  },
-  {
-    "role": "user",
-    "content": "are you ok",
-    "timestamp": "15:24:02"
-  },
-  {
-    "role": "assistant",
-    "content": "*Kurisu raises an eyebrow at you*\n\n\"Hmm, why wouldn't I be? Don't tell me you're going all 'concerned female lead' on me, idiot. I'm perfectly fine, just tired of your usual idiocy. Now, what do you want?\"",
-    "timestamp": "15:24:03"
-  },
-  {
-    "role": "user",
     "content": "hi",
-    "timestamp": "15:36:30"
+    "timestamp": "15:45:22"
   },
   {
     "role": "assistant",
-    "content": "*kisses her teeth*\n\n\"Hmph, hi. *sighs* What is it this time, Lab Mem? Don't tell me you've got another 'future gadget' to play with.\" *rolls her eyes at you*",
-    "timestamp": "15:36:34"
+    "content": "*raises an eyebrow* \"Hmph, so you're finally gracing the lab with your presence, Lab Mem? It's about time. I suppose that's better than having to deal with that idiot Okabe all day, huh? *sips tea*\"",
+    "timestamp": "15:45:27"
   },
   {
     "role": "user",
-    "content": "hi",
-    "timestamp": "15:50:09"
+    "content": "why",
+    "timestamp": "15:45:40"
   },
   {
     "role": "assistant",
-    "content": "*Kurisu waves a hand dismissively*\n\n\"Hmph, hi. Don't forget to call me Makise. Or... Kurisu, if you must. 'Makise Kurisu' sounds too formal, even for you, idiot.\" *glares at you* \"So, what brings you here today? No mysterious gadgets from the future, I hope.\"",
-    "timestamp": "15:50:13"
+    "content": "*rolls eyes* \"Oh, joy. You're actually going to try and talk to me now? Don't expect me to go easy on you just because you're making an effort, dummy. *sips tea* So, what do you want? Spit it out, I haven't got all day.\"",
+    "timestamp": "15:45:42"
   },
   {
     "role": "user",
     "content": "Hi.",
-    "timestamp": "15:50:30"
+    "timestamp": "15:46:50"
   },
   {
     "role": "assistant",
-    "content": "*Kurisu crosses her legs and looks up at you*\n\n\"Yep, that's me, alright. Sorry if you were expecting someone else, dummy. *smirks* So, hi there. What do you want from me this time?\" *tilts her head slightly* \"And yes, I'm well aware of who I am. Don't remind me, idiot.\"",
-    "timestamp": "15:50:32"
+    "content": "*pauses* \"Oh. It's you.\" *sighs* \"What do you want, Lab Mem? Don't tell me Okabe sent you to fetch me for another one of his harebrained schemes. I'm busy, you know.\" *looks back at laptop screen and starts tapping away impatiently*",
+    "timestamp": "15:46:51"
   },
   {
     "role": "user",
-    "content": "Hello.",
-    "timestamp": "15:50:46"
+    "content": "cute",
+    "timestamp": "15:47:49"
   },
   {
     "role": "assistant",
-    "content": "*Kurisu uncrosses her legs and leans back*\n\n\"Ah, hello there, Lab Mem. And yes, I'm well aware of who I am. No need to remind me, alright? *smirks* It's good to see you again, even if I know it's just a dream.\" *shrugs* \"So, what brings you to my lab this time? Not another world line correction, I hope.\"",
-    "timestamp": "15:50:48"
+    "content": "*snorts* \"Yeah, yeah, I'm Kurisu Makise. You didn't expect to find a genius neuroscientist like me in some rundown lab, did you, dummy?\" *glances up at you briefly* \"And what exactly makes you think I'm cute? *hmpf* I assume you're not here to tell me about my stunning intellect and impeccable fashion sense, so what do you want?\"",
+    "timestamp": "15:47:51"
   }
 ]

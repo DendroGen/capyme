@@ -45,29 +45,37 @@ whisper_engine = WhisperModel("base.en", device="cpu", compute_type="float32")
 
 app = Flask(__name__)
 CORS(app)
+
 AUDIO_DIR = os.path.join(SERVER_DIR, "audio")
 UIGROUNDS_DIR = os.path.abspath(os.path.join(SERVER_DIR, "../capyweb/uigrounds"))
 SOUNDS_DIR = os.path.abspath(os.path.join(SERVER_DIR, "../capyweb/sounds"))
 os.makedirs(AUDIO_DIR, exist_ok=True)
+
 GSV2_PATH = r"C:\SVG\GSv2pro"
 
 
 # --- 3. VİZYON MOTORU (İNGİLİZCE QWEN) ---
 def get_vision_analysis(user_msg, page_no=None, direct_b64=None):
     b64_img = None
+
     if direct_b64:
         b64_img = direct_b64.split(",")[1] if "," in direct_b64 else direct_b64
+
     elif page_no:
         img_path = os.path.join(
             DEPO_BASE, "geometri", "analitikgeometri1", f"sayfa_{page_no}.jpg"
         )
+
         if not os.path.exists(img_path):
             return "IMAGE_NOT_FOUND"
+
         img = Image.open(img_path)
         img.thumbnail((1024, 1024))
+
         buffered = io.BytesIO()
         img.save(buffered, format="JPEG", quality=85)
         b64_img = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
     else:
         return "NO_IMAGE"
 
@@ -75,15 +83,23 @@ def get_vision_analysis(user_msg, page_no=None, direct_b64=None):
         # Prompt tamamıyla İngilizce
         payload = {
             "model": VISION_MODEL,
-            "prompt": f"Please analyze this image carefully. What is in it? If there is text, math formulas, or questions, read and solve them. Reply ONLY in English. User's note: {user_msg}",
+            "prompt": (
+                "Please analyze this image carefully. What is in it? "
+                "If there is text, math formulas, or questions, read and solve them. "
+                f"Reply ONLY in English. User's note: {user_msg}"
+            ),
             "images": [b64_img],
             "stream": False,
             "options": {"temperature": 0.0, "num_predict": 300},
         }
+
         response = requests.post(
-            "http://localhost:11434/api/generate", json=payload, timeout=180
+            "http://localhost:11434/api/generate",
+            json=payload,
+            timeout=180,
         )
         return response.json().get("response", "")
+
     except Exception as e:
         return f"ERROR: {str(e)}"
 
@@ -94,9 +110,14 @@ def get_logic(agent, txt, image_b64=None):
     current_time = now.strftime("%H:%M")
 
     if txt == "[IDLE_PING_60]":
-        txt = f"[SYSTEM: The user hasn't typed anything for exactly 1 hour. Current time is {current_time}. Send a short message staying in character.]"
+        txt = (
+            "[SYSTEM: The user hasn't typed anything for exactly 1 hour. "
+            f"Current time is {current_time}. "
+            "Send a short message staying in character.]"
+        )
 
     f = f"{agent}.json"
+
     if os.path.exists(f):
         with open(f, "r", encoding="utf-8") as file:
             h = json.load(file)
@@ -107,10 +128,16 @@ def get_logic(agent, txt, image_b64=None):
 
     if image_b64:
         analysis = get_vision_analysis(txt, direct_b64=image_b64)
+
         if "ERROR" in analysis or "TIMEOUT" in analysis:
             txt = f"[SYSTEM: The user sent an image but the vision model failed.] User: {txt}"
         else:
-            txt = f"[SYSTEM: The user sent an image. Vision Model (Qwen) analysis: '{analysis}'. Provide a clever response based ONLY on this analysis.] User: {txt}"
+            txt = (
+                "[SYSTEM: The user sent an image. "
+                f"Vision Model (Qwen) analysis: '{analysis}'. "
+                "Provide a clever response based ONLY on this analysis.] "
+                f"User: {txt}"
+            )
     else:
         geo_match = re.search(r"(?:sayfa|page)\s*(\d+)", txt.lower())
         if geo_match:
@@ -127,7 +154,11 @@ def get_logic(agent, txt, image_b64=None):
     # --- İNGİLİZCE KATI KURALLAR ---
     if len(messages_to_send) > 0 and messages_to_send[0]["role"] == "system":
         messages_to_send[0]["content"] += (
-            f"\n\n[SYSTEM RULE: 1) SPEAK ONLY IN ENGLISH. 2) Do not act like a grammar police. 3) NEVER use translation notes. 4) Current Time: {now.strftime('%H:%M')} 5) Put physical actions and expressions inside *asterisks*.]"
+            f"\n\n[SYSTEM RULE: 1) SPEAK ONLY IN ENGLISH. "
+            "2) Do not act like a grammar police. "
+            "3) NEVER use translation notes. "
+            f"4) Current Time: {now.strftime('%H:%M')} "
+            "5) Put physical actions and expressions inside *asterisks*.]"
         )
 
     r = client.chat.completions.create(
@@ -157,23 +188,28 @@ def get_logic(agent, txt, image_b64=None):
 
     with open(f, "w", encoding="utf-8") as file:
         json.dump(h, file, indent=2, ensure_ascii=False)
+
     return ai, [m for m in h if m["role"] != "system"]
 
 
 def detect_emotion(text):
     text = text.lower()
+
     if any(
         word in text
         for word in ["baka", "shut up", "stupid", "christina", "idiot", "dummy"]
     ):
         return "angry_shout"
+
     if any(word in text for word in ["cute", "blush", "pervert", "embarrassing"]):
         return "shy_overheat"
+
     if any(
         word in text
         for word in ["theory", "calculate", "science", "geometry", "analyze"]
     ):
         return "thinking"
+
     return "shy_mild"
 
 
@@ -182,22 +218,35 @@ def detect_emotion(text):
 def chat():
     try:
         d = request.json
+
         reply, h = get_logic(
-            d.get("agent", "Makise_Kurisu"), d.get("message"), d.get("image_b64")
+            d.get("agent", "Makise_Kurisu"),
+            d.get("message"),
+            d.get("image_b64"),
         )
+
         reply = ultra_clean_text(reply)
         emotion = detect_emotion(reply)
         audio_url = None
+
         if d.get("voice_enabled") and is_port_open(9880):
             v_text = clean_for_voice(reply)
             msg_id = uuid.uuid4().hex
             f_name = f"res_{msg_id}.wav"
             p_p = os.path.join(AUDIO_DIR, f_name)
+
             if sovits_gen(" " + v_text, p_p):
                 audio_url = f"http://127.0.0.1:5000/audio/{f_name}"
+
         return jsonify(
-            {"reply": reply, "history": h, "audio_url": audio_url, "emotion": emotion}
+            {
+                "reply": reply,
+                "history": h,
+                "audio_url": audio_url,
+                "emotion": emotion,
+            }
         )
+
     except Exception as e:
         print(f"Chat API Error: {e}")
         return jsonify({"reply": "*System error, Lab Mem.*", "emotion": "sad"})
@@ -209,14 +258,18 @@ def voice_chat():
         agent = request.form.get("agent")
         v_enabled = request.form.get("voice_enabled") == "true"
         audio_f = request.files["audio"]
+
         tmp = os.path.join(AUDIO_DIR, f"v_{uuid.uuid4().hex}.webm")
         audio_f.save(tmp)
+
         segs, _ = whisper_engine.transcribe(tmp)
         ut = "".join([s.text for s in segs]).strip()
+
         try:
             os.remove(tmp)
         except:
             pass
+
         if not ut:
             return jsonify({"error": "No audio"}), 400
 
@@ -230,6 +283,7 @@ def voice_chat():
             msg_id = uuid.uuid4().hex
             f_name = f"vres_{msg_id}.wav"
             p_p = os.path.join(AUDIO_DIR, f_name)
+
             if sovits_gen(" " + v_text, p_p):
                 audio_url = f"http://127.0.0.1:5000/audio/{f_name}"
 
@@ -242,6 +296,7 @@ def voice_chat():
                 "emotion": emotion,
             }
         )
+
     except Exception as e:
         print(f"Voice Chat Error: {e}")
         return jsonify({"reply": "*Error*", "emotion": "sad"})
@@ -251,8 +306,10 @@ def voice_chat():
 def clear_history():
     agent = request.args.get("agent", "Makise_Kurisu")
     f = f"{agent}.json"
+
     if os.path.exists(f):
         os.remove(f)
+
     return jsonify({"status": "success"})
 
 
@@ -279,11 +336,13 @@ def serve_sounds(filename):
 @app.route("/api/history")
 def history():
     agent = request.args.get("agent", "Makise_Kurisu")
+
     if os.path.exists(f"{agent}.json"):
         with open(f"{agent}.json", "r", encoding="utf-8") as f:
             return jsonify(
                 {"history": [m for m in json.load(f) if m["role"] != "system"]}
             )
+
     return jsonify({"history": []})
 
 
@@ -294,13 +353,15 @@ def start_gvc():
             f'start "AMADEUS_GVC" /min cmd /c "cd /d {GSV2_PATH} && runtime\\python.exe api_v2.py -a 127.0.0.1 -p 9880"'
         )
         return jsonify({"status": "ready"})
+
     return jsonify({"status": "running"})
 
 
 @app.route("/api/gvc/kill", methods=["POST"])
 def kill_gvc():
     subprocess.call(
-        ["taskkill", "/F", "/T", "/FI", "WINDOWTITLE eq AMADEUS_GVC*"], shell=True
+        ["taskkill", "/F", "/T", "/FI", "WINDOWTITLE eq AMADEUS_GVC*"],
+        shell=True,
     )
     return jsonify({"status": "terminated"})
 
