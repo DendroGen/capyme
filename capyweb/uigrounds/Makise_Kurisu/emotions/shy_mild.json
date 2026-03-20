@@ -1,0 +1,14 @@
+{
+  "key": "shy_mild",
+  "label": "Utanmış hafif",
+  "description": "Yüz odaklı, gözler yana kaymış, hafif kızarmış, omuzlar biraz içe kapanık.",
+  "triggers": [
+    "embarrassed",
+    "shy",
+    "blush",
+    "soft smile",
+    "looks away",
+    "hesitates"
+  ],
+  "priority": 5
+}

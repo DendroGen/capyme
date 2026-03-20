@@ -1,16 +1,23 @@
-import yaml, json, os, sys, uuid, datetime, socket, time, re, subprocess, unicodedata
-import requests
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-from openai import OpenAI
-from faster_whisper import WhisperModel
-import pytz
 import base64
-from PIL import Image
+import datetime
 import io
+import json
+import os
+import re
+import socket
+import subprocess
+import sys
+import uuid
 
+import pytz
+import requests
+import yaml
+from PIL import Image
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+from faster_whisper import WhisperModel
+from openai import OpenAI
 
-# --- 1. YOL AYARLARI ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../.."))
 DEPO_BASE = os.path.abspath(os.path.join(SERVER_DIR, "../depo"))
@@ -18,26 +25,30 @@ DEPO_BASE = os.path.abspath(os.path.join(SERVER_DIR, "../depo"))
 sys.path.append(SERVER_DIR)
 os.chdir(SERVER_DIR)
 
+from process.llm_funcs.agent_store import AgentStore, safe_agent_folder_name
+from process.llm_funcs.auth_utils import check_agents_password
+from process.llm_funcs.roleplay_utils import (
+    build_idle_ping,
+    clean_for_voice,
+    detect_emotion,
+    prepare_messages,
+    strip_translation_noise,
+    ultra_clean_text,
+)
+from process.llm_funcs.scene_selector import choose_scene_visual
 from process.tts_func.sovits_ping import sovits_gen
 
 MEMORY_DIR = os.path.join(SERVER_DIR, "hafiza")
 os.makedirs(MEMORY_DIR, exist_ok=True)
 
+AUDIO_DIR = os.path.join(SERVER_DIR, "audio")
+os.makedirs(AUDIO_DIR, exist_ok=True)
 
-# --- 2. TEMİZLİK VE AYARLAR ---
-def ultra_clean_text(text):
-    if not text:
-        return ""
-    return text.strip()
+UIGROUNDS_DIR = os.path.abspath(os.path.join(SERVER_DIR, "../capyweb/uigrounds"))
+SOUNDS_DIR = os.path.abspath(os.path.join(SERVER_DIR, "../capyweb/sounds"))
+GSV2_PATH = r"C:\SVG\GSv2pro"
 
-
-def clean_for_voice(text):
-    if not text:
-        return ""
-    text = re.sub(r"\*.*?\*", " ", text, flags=re.DOTALL)
-    text = re.sub(r"[^\w\s\.\,\!\?çğıöşüÇĞIÖŞÜ]", " ", text)
-    return text.lower().strip()
-
+agent_store = AgentStore(UIGROUNDS_DIR)
 
 with open("agents_config.yaml", "r", encoding="utf-8") as f:
     config_db = yaml.safe_load(f)
@@ -50,129 +61,32 @@ whisper_engine = WhisperModel("base.en", device="cpu", compute_type="float32")
 app = Flask(__name__)
 CORS(app)
 
-AUDIO_DIR = os.path.join(SERVER_DIR, "audio")
-UIGROUNDS_DIR = os.path.abspath(os.path.join(SERVER_DIR, "../capyweb/uigrounds"))
-SOUNDS_DIR = os.path.abspath(os.path.join(SERVER_DIR, "../capyweb/sounds"))
-os.makedirs(AUDIO_DIR, exist_ok=True)
 
-GSV2_PATH = r"C:\SVG\GSv2pro"
+def get_memory_path(agent_name: str) -> str:
+    return os.path.join(MEMORY_DIR, f"{agent_name}.json")
 
 
-# --- 2.5 AGENT DOSYA YARDIMCILARI ---
-def safe_agent_folder_name(name):
-    if not name:
-        return "Unnamed_Agent"
-
-    name = unicodedata.normalize("NFKD", name)
-    name = name.encode("ascii", "ignore").decode("ascii")
-    name = re.sub(r"[^\w\s-]", "", name).strip()
-    name = re.sub(r"[-\s]+", "_", name)
-
-    return name or "Unnamed_Agent"
-
-
-def get_agent_dir(agent_name):
-    return os.path.join(UIGROUNDS_DIR, agent_name)
-
-
-def get_agent_json_path(agent_name):
-    return os.path.join(get_agent_dir(agent_name), "agent.json")
-
-
-def load_agent_data(agent_name):
-    agent_json = get_agent_json_path(agent_name)
-
-    if os.path.exists(agent_json):
-        with open(agent_json, "r", encoding="utf-8") as f:
-            return json.load(f)
-
-    return None
-
-
-def save_agent_data(agent_name, data):
-    agent_dir = get_agent_dir(agent_name)
-    os.makedirs(agent_dir, exist_ok=True)
-
-    with open(get_agent_json_path(agent_name), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-
-def list_available_agents():
-    agents = []
-
-    if not os.path.exists(UIGROUNDS_DIR):
-        return agents
-
-    for item in os.listdir(UIGROUNDS_DIR):
-        agent_dir = os.path.join(UIGROUNDS_DIR, item)
-
-        if not os.path.isdir(agent_dir):
-            continue
-
-        agent_json = os.path.join(agent_dir, "agent.json")
-        if not os.path.exists(agent_json):
-            continue
-
-        try:
-            with open(agent_json, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            profile_url = None
-            for ext in ["jpg", "png", "jpeg", "webp"]:
-                profile_path = os.path.join(agent_dir, f"profile.{ext}")
-                if os.path.exists(profile_path):
-                    profile_url = (
-                        f"http://127.0.0.1:5000/uigrounds/{item}/profile.{ext}"
-                    )
-                    break
-
-            agents.append(
-                {
-                    "name": data.get("name", item),
-                    "display_name": data.get("display_name", item.replace("_", " ")),
-                    "age": data.get("age", ""),
-                    "personality": data.get("personality", ""),
-                    "backstory": data.get("backstory", ""),
-                    "first_meeting": data.get("first_meeting", ""),
-                    "theme": data.get("theme", {}),
-                    "profile_url": profile_url,
-                }
-            )
-
-        except Exception as e:
-            print(f"Agent load error ({item}): {e}")
-
-    agents.sort(key=lambda x: x["display_name"].lower())
-    return agents
-
-
-# --- 3. VİZYON MOTORU (İNGİLİZCE QWEN) ---
 def get_vision_analysis(user_msg, page_no=None, direct_b64=None):
     b64_img = None
 
     if direct_b64:
         b64_img = direct_b64.split(",")[1] if "," in direct_b64 else direct_b64
-
     elif page_no:
         img_path = os.path.join(
             DEPO_BASE, "geometri", "analitikgeometri1", f"sayfa_{page_no}.jpg"
         )
-
         if not os.path.exists(img_path):
             return "IMAGE_NOT_FOUND"
 
         img = Image.open(img_path)
         img.thumbnail((1024, 1024))
-
         buffered = io.BytesIO()
         img.save(buffered, format="JPEG", quality=85)
         b64_img = base64.b64encode(buffered.getvalue()).decode("utf-8")
-
     else:
         return "NO_IMAGE"
 
     try:
-        # Prompt tamamıyla İngilizce
         payload = {
             "model": VISION_MODEL,
             "prompt": (
@@ -191,31 +105,23 @@ def get_vision_analysis(user_msg, page_no=None, direct_b64=None):
             timeout=180,
         )
         return response.json().get("response", "")
-
     except Exception as e:
         return f"ERROR: {str(e)}"
 
 
-# --- 4. BEYİN FONKSİYONU ---
-# --- 4. BEYİN FONKSİYONU ---
 def get_logic(agent, txt, image_b64=None):
     now = datetime.datetime.now(pytz.timezone("Europe/Istanbul"))
     current_time = now.strftime("%H:%M")
+    memory_path = get_memory_path(agent)
 
     if txt == "[IDLE_PING_60]":
-        txt = (
-            "[SYSTEM: The user hasn't typed anything for exactly 1 hour. "
-            f"Current time is {current_time}. "
-            "Send a short message staying in character.]"
-        )
+        txt = build_idle_ping(current_time)
 
-    f = os.path.join(MEMORY_DIR, f"{agent}.json")
-
-    if os.path.exists(f):
-        with open(f, "r", encoding="utf-8") as file:
+    if os.path.exists(memory_path):
+        with open(memory_path, "r", encoding="utf-8") as file:
             h = json.load(file)
     else:
-        agent_data = load_agent_data(agent)
+        agent_data = agent_store.load_agent_data(agent)
 
         if agent_data:
             system_prompt = agent_data.get("system_prompt", "You are an AI assistant.")
@@ -229,7 +135,6 @@ def get_logic(agent, txt, image_b64=None):
 
     if image_b64:
         analysis = get_vision_analysis(txt, direct_b64=image_b64)
-
         if "ERROR" in analysis or "TIMEOUT" in analysis:
             txt = f"[SYSTEM: The user sent an image but the vision model failed.] User: {txt}"
         else:
@@ -250,23 +155,7 @@ def get_logic(agent, txt, image_b64=None):
         ts = now.strftime("%H:%M:%S")
         h.append({"role": "user", "content": txt, "timestamp": ts})
 
-    messages_to_send = [{"role": m["role"], "content": m["content"]} for m in h]
-
-    # --- İNGİLİZCE KATI KURALLAR ---
-    if len(messages_to_send) > 0 and messages_to_send[0]["role"] == "system":
-        messages_to_send[0]["content"] += (
-            "\n\n[ROLEPLAY ENGINE:"
-            "Stay in the scene."
-            "Do not repeat backstory."
-            "Do not introduce yourself again."
-            "Use both actions and dialogue."
-            "Each reply MUST include at least 2 actions."
-            "Each reply should be 2-4 sentences."
-            "Move the scene forward logically."
-            "React directly to the user's last message."
-            "Do not stall or freeze."
-            "No emojis.]"
-        )
+    messages_to_send = prepare_messages(h, current_time)
 
     r = client.chat.completions.create(
         model=MODEL_NAME,
@@ -275,14 +164,9 @@ def get_logic(agent, txt, image_b64=None):
     )
 
     ai = r.choices[0].message.content
+    ai = strip_translation_noise(ai)
 
-    # Çeviri parantezlerini silen güvenliği İngilizce notlara göre de ayarladım
-    if ai:
-        ai = re.sub(r"\s*\(Translation:.*?\)", "", ai, flags=re.IGNORECASE)
-        ai = re.sub(r"\s*\[Translation:.*?\]", "", ai, flags=re.IGNORECASE)
-        ai = ai.strip()
-
-    if not ai or ai == "":
+    if not ai:
         ai = "*Looks at you silently...*"
 
     h.append(
@@ -293,41 +177,25 @@ def get_logic(agent, txt, image_b64=None):
         }
     )
 
-    with open(f, "w", encoding="utf-8") as file:
+    with open(memory_path, "w", encoding="utf-8") as file:
         json.dump(h, file, indent=2, ensure_ascii=False)
 
     return ai, [m for m in h if m["role"] != "system"]
 
 
-def detect_emotion(text):
-    text = text.lower()
-
-    if any(
-        word in text
-        for word in ["baka", "shut up", "stupid", "christina", "idiot", "dummy"]
-    ):
-        return "angry_shout"
-
-    if any(word in text for word in ["cute", "blush", "pervert", "embarrassing"]):
-        return "shy_overheat"
-
-    if any(
-        word in text
-        for word in ["theory", "calculate", "science", "geometry", "analyze"]
-    ):
-        return "thinking"
-
-    return "shy_mild"
+def is_port_open(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("127.0.0.1", port)) == 0
 
 
-# --- 5. FLASK ROUTES ---
 @app.route("/api/chat", methods=["POST"])
 def chat():
     try:
         d = request.json
 
-        reply, h = get_logic(
-            d.get("agent", "Makise_Kurisu"),
+        agent_name = d.get("agent", "Makise_Kurisu")
+        reply, history = get_logic(
+            agent_name,
             d.get("message"),
             d.get("image_b64"),
         )
@@ -340,20 +208,24 @@ def chat():
             v_text = clean_for_voice(reply)
             msg_id = uuid.uuid4().hex
             f_name = f"res_{msg_id}.wav"
-            p_p = os.path.join(AUDIO_DIR, f_name)
+            out_path = os.path.join(AUDIO_DIR, f_name)
 
-            if sovits_gen(" " + v_text, p_p):
+            if sovits_gen(" " + v_text, out_path):
                 audio_url = f"http://127.0.0.1:5000/audio/{f_name}"
+
+        emotions = agent_store.load_emotions(agent_name)
+        poses = agent_store.load_poses(agent_name)
+        scene_visual = choose_scene_visual(reply, poses, emotions)
 
         return jsonify(
             {
                 "reply": reply,
-                "history": h,
+                "history": history,
                 "audio_url": audio_url,
                 "emotion": emotion,
+                "scene_visual": scene_visual,
             }
         )
-
     except Exception as e:
         print(f"Chat API Error: {e}")
         return jsonify({"reply": "*System error, Lab Mem.*", "emotion": "sad"})
@@ -374,13 +246,13 @@ def voice_chat():
 
         try:
             os.remove(tmp)
-        except:
+        except Exception:
             pass
 
         if not ut:
             return jsonify({"error": "No audio"}), 400
 
-        reply, h = get_logic(agent, ut)
+        reply, history = get_logic(agent, ut)
         reply = ultra_clean_text(reply)
         emotion = detect_emotion(reply)
         audio_url = None
@@ -389,41 +261,69 @@ def voice_chat():
             v_text = clean_for_voice(reply)
             msg_id = uuid.uuid4().hex
             f_name = f"vres_{msg_id}.wav"
-            p_p = os.path.join(AUDIO_DIR, f_name)
+            out_path = os.path.join(AUDIO_DIR, f_name)
 
-            if sovits_gen(" " + v_text, p_p):
+            if sovits_gen(" " + v_text, out_path):
                 audio_url = f"http://127.0.0.1:5000/audio/{f_name}"
+
+        emotions = agent_store.load_emotions(agent)
+        poses = agent_store.load_poses(agent)
+        scene_visual = choose_scene_visual(reply, poses, emotions)
 
         return jsonify(
             {
                 "user_text": ut,
                 "reply": reply,
-                "history": h,
+                "history": history,
                 "audio_url": audio_url,
                 "emotion": emotion,
+                "scene_visual": scene_visual,
             }
         )
-
     except Exception as e:
         print(f"Voice Chat Error: {e}")
         return jsonify({"reply": "*Error*", "emotion": "sad"})
 
 
+@app.route("/api/history")
+def history():
+    agent = request.args.get("agent", "Makise_Kurisu")
+    memory_path = get_memory_path(agent)
+
+    if os.path.exists(memory_path):
+        with open(memory_path, "r", encoding="utf-8") as f:
+            return jsonify(
+                {"history": [m for m in json.load(f) if m["role"] != "system"]}
+            )
+
+    return jsonify({"history": []})
+
+
 @app.route("/api/clear_history", methods=["POST"])
 def clear_history():
     agent = request.args.get("agent", "Makise_Kurisu")
-    f = os.path.join(MEMORY_DIR, f"{agent}.json")
+    memory_path = get_memory_path(agent)
 
-    if os.path.exists(f):
-        os.remove(f)
+    if os.path.exists(memory_path):
+        os.remove(memory_path)
 
     return jsonify({"status": "success"})
 
 
+@app.route("/api/agents/auth", methods=["POST"])
+def api_agents_auth():
+    if not check_agents_password():
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    return jsonify({"ok": True})
+
+
 @app.route("/api/agents", methods=["GET"])
 def api_list_agents():
+    if not check_agents_password():
+        return jsonify({"error": "Unauthorized"}), 401
+
     try:
-        return jsonify({"agents": list_available_agents()})
+        return jsonify({"agents": agent_store.list_available_agents()})
     except Exception as e:
         print(f"Agents list error: {e}")
         return jsonify({"agents": []}), 500
@@ -432,9 +332,12 @@ def api_list_agents():
 @app.route("/api/agents/<agent_name>", methods=["GET"])
 def api_get_agent(agent_name):
     try:
-        data = load_agent_data(agent_name)
+        data = agent_store.load_agent_data(agent_name)
         if not data:
             return jsonify({"error": "Agent not found"}), 404
+
+        data["emotions"] = agent_store.load_emotions(agent_name)
+        data["poses"] = agent_store.load_poses(agent_name)
         return jsonify(data)
     except Exception as e:
         print(f"Agent get error: {e}")
@@ -443,6 +346,9 @@ def api_get_agent(agent_name):
 
 @app.route("/api/agents/create", methods=["POST"])
 def api_create_agent():
+    if not check_agents_password():
+        return jsonify({"error": "Unauthorized"}), 401
+
     try:
         raw_name = request.form.get("name", "").strip()
         display_name = request.form.get("display_name", "").strip()
@@ -460,12 +366,12 @@ def api_create_agent():
             return jsonify({"error": "Agent name is required"}), 400
 
         agent_name = safe_agent_folder_name(raw_name)
-        agent_dir = get_agent_dir(agent_name)
+        agent_dir = agent_store.get_agent_dir(agent_name)
 
         if os.path.exists(agent_dir):
             return jsonify({"error": "An agent with this name already exists"}), 400
 
-        os.makedirs(agent_dir, exist_ok=True)
+        agent_store.ensure_agent_dirs(agent_name)
 
         profile_file = request.files.get("profile_image")
         background_file = request.files.get("background_image")
@@ -508,18 +414,12 @@ def api_create_agent():
             },
         }
 
-        save_agent_data(agent_name, agent_data)
+        agent_store.save_agent_data(agent_name, agent_data)
 
         return jsonify({"status": "success", "agent": agent_data})
-
     except Exception as e:
         print(f"Create agent error: {e}")
         return jsonify({"error": "Failed to create agent"}), 500
-
-
-def is_port_open(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("127.0.0.1", port)) == 0
 
 
 @app.route("/audio/<f>")
@@ -535,23 +435,6 @@ def serve_ui(filename):
 @app.route("/sounds/<path:filename>")
 def serve_sounds(filename):
     return send_from_directory(SOUNDS_DIR, filename)
-
-
-@app.route("/api/history")
-def history():
-    agent = request.args.get("agent", "Makise_Kurisu")
-
-    f = os.path.join(MEMORY_DIR, f"{agent}.json")
-
-    print("HISTORY PATH:", f)  # DEBUG
-
-    if os.path.exists(f):
-        with open(f, "r", encoding="utf-8") as file:
-            return jsonify(
-                {"history": [m for m in json.load(file) if m["role"] != "system"]}
-            )
-
-    return jsonify({"history": []})
 
 
 @app.route("/api/gvc/start", methods=["POST"])

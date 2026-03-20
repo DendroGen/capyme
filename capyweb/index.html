@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMADEUS OS v2.6</title>
+    <title>AMADEUS OS</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -18,11 +18,11 @@
         <div class="selector-subtitle">Select an active cognition profile</div>
 
         <div class="main-menu-grid">
-            <div class="main-menu-card featured" onclick="initAgent('Makise_Kurisu')">
+            <div class="main-menu-card featured" onclick="App.initAgent('Makise_Kurisu')">
                 <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg" alt="Makise Kurisu">
                 <div class="main-menu-label">
                     <div class="main-menu-title">Makise Kurisu</div>
-                    <div class="main-menu-desc">Open direct synchronized chat session</div>
+                    <div class="main-menu-desc">Doğrudan senkronize sohbet oturumunu aç</div>
                 </div>
             </div>
 
@@ -30,7 +30,7 @@
                 <img src="http://127.0.0.1:5000/uigrounds/ajanos.jpg" alt="Ajanlar">
                 <div class="main-menu-label">
                     <div class="main-menu-title">Ajanlar</div>
-                    <div class="main-menu-desc">Browse and select created agents</div>
+                    <div class="main-menu-desc">Oluşturulmuş ajanları gör ve seç</div>
                 </div>
             </div>
 
@@ -61,6 +61,25 @@
         </div>
 
         <div id="agents-grid" class="agents-grid"></div>
+    </div>
+
+    <!-- PASSWORD MODAL -->
+    <div id="agents-password-modal" class="modal hidden">
+        <div class="modal-panel password-panel">
+            <div class="modal-header">
+                <div class="modal-title">AJANIN ŞİFRESİ</div>
+            </div>
+
+            <div class="form-group full">
+                <label for="agents-password-input">Şifre</label>
+                <input id="agents-password-input" type="password" placeholder="Şifrenizi girin">
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn secondary" id="agents-password-cancel-btn">İptal etmek</button>
+                <button type="button" class="btn" id="agents-password-confirm-btn">Açık</button>
+            </div>
+        </div>
     </div>
 
     <!-- CREATE AGENT MODAL -->
@@ -110,7 +129,7 @@
 
                     <div class="form-group full">
                         <label for="agent-personality">Personality / Behavior</label>
-                        <textarea id="agent-personality" name="personality" rows="3" placeholder="Cold, sharp, observant, dominant..."></textarea>
+                        <textarea id="agent-personality" name="personality" rows="3" placeholder="Cold, observant, dominant, quiet..."></textarea>
                     </div>
 
                     <div class="form-group full">
@@ -125,7 +144,7 @@
 
                     <div class="form-group full">
                         <label for="agent-system-prompt">System Prompt (optional)</label>
-                        <textarea id="agent-system-prompt" name="system_prompt" rows="5" placeholder="Leave empty to auto-generate from the fields above."></textarea>
+                        <textarea id="agent-system-prompt" name="system_prompt" rows="5" placeholder="Boş bırakırsan alanlardan otomatik üretir."></textarea>
                     </div>
 
                     <div class="form-group">
@@ -154,13 +173,11 @@
     <div class="chat-container" id="draggable">
         <div class="chat-bg" id="chat-emotion-bg"></div>
         <div class="chat-bg-overlay"></div>
-    <div class="profile-side-panel hidden" id="profile-side-panel">
-    <div class="profile-side-inner">
-        <img id="profile-side-image" class="profile-side-image" src="" alt="profile large">
-    </div>
-</div>
+
         <div class="header" id="drag-handle">
-            <div class="avatar-wrap" title="Minimize / Restore">
+            <button id="chat-back-btn" class="v-btn back-btn" type="button">← BACK</button>
+
+            <div class="avatar-wrap" title="Profile Panel">
                 <div class="avatar-ring idle" id="avatar-ring"></div>
                 <img id="active-profile" src="" class="avatar" alt="profile">
             </div>
@@ -205,6 +222,16 @@
         </div>
     </div>
 
+    <!-- PROFILE SIDE PANEL -->
+    <div class="profile-side-panel hidden" id="profile-side-panel">
+        <div class="profile-side-inner">
+            <img id="profile-side-image" class="profile-side-image" src="" alt="profile large">
+        </div>
+    </div>
+
+    <script src="js/ui_state.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/visuals.js"></script>
     <script src="js/app.js"></script>
     <script src="js/agents.js"></script>
 </body>

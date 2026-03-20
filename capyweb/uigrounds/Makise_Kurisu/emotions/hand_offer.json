@@ -1,0 +1,13 @@
+{
+  "key": "hand_offer",
+  "label": "Elini uzatıyor",
+  "description": "Karakter kullanıcıya doğru elini uzatmış, sahne fiziksel etkileşim başlatıyor.",
+  "triggers": [
+    "extends hand",
+    "offers hand",
+    "reaches toward you",
+    "pulls you closer",
+    "touches your hand"
+  ],
+  "priority": 8
+}
