@@ -1,0 +1,15 @@
+[
+  {
+    "key": "foot_59b0a0f2.png",
+    "label": "foot",
+    "description": "deena showing her socked foot.",
+    "triggers": [
+      "foot",
+      "socked foot",
+      "socks",
+      "sock",
+      "feet."
+    ],
+    "image_url": "http://127.0.0.1:5000/uigrounds/deenaa/visuals/poses/foot_59b0a0f2.png"
+  }
+]

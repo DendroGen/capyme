@@ -9,6 +9,7 @@ window.App = (() => {
     let currentAudio = null;
     let isTyping = false;
     let profilePanelOpen = false;
+    let currentSceneVisualTimer = null;
 
     const box = document.getElementById("box");
     const inp = document.getElementById("inp");
@@ -32,7 +33,6 @@ window.App = (() => {
     const profileSidePanel = document.getElementById("profile-side-panel");
     const profileSideImage = document.getElementById("profile-side-image");
     const chatBackBtn = document.getElementById("chat-back-btn");
-    const openKurisuBtn = document.getElementById("open-kurisu-btn");
 
     let audioCtx = null;
     let analyser = null;
@@ -62,6 +62,7 @@ window.App = (() => {
         micStatusText.textContent = recording ? "Mic recording" : "Mic idle";
 
         avatarRing.classList.remove("talking", "recording");
+
         if (recording) {
             avatarRing.classList.add("recording");
             waveHolder.classList.add("active");
@@ -100,8 +101,12 @@ window.App = (() => {
         const candidates = [
             `${baseUrl}/background.jpg`,
             `${baseUrl}/background.png`,
+            `${baseUrl}/background.jpeg`,
+            `${baseUrl}/background.webp`,
             `${baseUrl}/bg.jpg`,
-            `${baseUrl}/bg.png`
+            `${baseUrl}/bg.png`,
+            `${baseUrl}/bg.jpeg`,
+            `${baseUrl}/bg.webp`
         ];
 
         for (const src of candidates) {
@@ -119,9 +124,11 @@ window.App = (() => {
         const candidates = [
             `${baseUrl}/profile.jpg`,
             `${baseUrl}/profile.png`,
+            `${baseUrl}/profile.jpeg`,
+            `${baseUrl}/profile.webp`,
             `${baseUrl}/avatar.jpg`,
             `${baseUrl}/avatar.png`,
-            `${baseUrl}/profile.webp`,
+            `${baseUrl}/avatar.jpeg`,
             `${baseUrl}/avatar.webp`
         ];
 
@@ -129,13 +136,17 @@ window.App = (() => {
             try {
                 await preloadImage(src);
                 activeProfile.src = src;
-                profileSideImage.src = src;
+                if (profileSideImage) {
+                    profileSideImage.src = src;
+                }
                 return;
             } catch (_) {}
         }
 
         activeProfile.removeAttribute("src");
-        profileSideImage.removeAttribute("src");
+        if (profileSideImage) {
+            profileSideImage.removeAttribute("src");
+        }
     }
 
     async function setEmotionBackground(agent, emotion) {
@@ -148,9 +159,12 @@ window.App = (() => {
         const candidates = [
             `${base}/emotions/${emotion}.png`,
             `${base}/emotions/${emotion}.jpg`,
+            `${base}/emotions/${emotion}.jpeg`,
             `${base}/emotions/${emotion}.webp`,
             `${base}/${emotion}.png`,
-            `${base}/${emotion}.jpg`
+            `${base}/${emotion}.jpg`,
+            `${base}/${emotion}.jpeg`,
+            `${base}/${emotion}.webp`
         ];
 
         for (const src of candidates) {
@@ -163,6 +177,33 @@ window.App = (() => {
         }
 
         chatEmotionBg.classList.remove("show");
+    }
+
+    function showSceneVisual(sceneVisual) {
+        if (!sceneVisual || !sceneVisual.image_url) return;
+        if (!profileSidePanel || !profileSideImage) return;
+
+        if (currentSceneVisualTimer) {
+            clearTimeout(currentSceneVisualTimer);
+            currentSceneVisualTimer = null;
+        }
+
+        profileSideImage.src = sceneVisual.image_url;
+        profileSidePanel.classList.remove("hidden");
+        profileSidePanel.classList.add("scene-visual-visible");
+        profilePanelOpen = true;
+        updateProfilePanelPosition();
+
+        currentSceneVisualTimer = setTimeout(() => {
+            profileSidePanel.classList.add("scene-visual-fade");
+            setTimeout(() => {
+                profileSidePanel.classList.remove("scene-visual-visible");
+                profileSidePanel.classList.remove("scene-visual-fade");
+                profilePanelOpen = false;
+                profileSidePanel.classList.add("hidden");
+                currentSceneVisualTimer = null;
+            }, 15000);
+        }, 100);
     }
 
     async function ensureMic() {
@@ -243,7 +284,8 @@ window.App = (() => {
                 const x = i * (barWidth + gap);
                 const y = (height - barHeight) / 2;
 
-                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent2").trim() || "#ff1b1b";
+                const accent2 = getComputedStyle(document.documentElement).getPropertyValue("--accent2").trim() || "#ff1b1b";
+                ctx.fillStyle = accent2;
                 ctx.fillRect(x, y, barWidth, barHeight);
             }
         }
@@ -306,6 +348,7 @@ window.App = (() => {
                     });
 
                     const data = await res.json();
+
                     if (!res.ok) {
                         alert(data.error || "Edit failed.");
                         return;
@@ -314,7 +357,7 @@ window.App = (() => {
                     await loadHistory();
 
                     if (data.scene_visual) {
-                        window.Visuals.showSceneVisual(data.scene_visual);
+                        showSceneVisual(data.scene_visual);
                     }
                 } catch (_) {
                     alert("Edit failed.");
@@ -335,9 +378,11 @@ window.App = (() => {
             typeWriter(content, msg.content, audioUrl, emotion);
         } else {
             content.textContent = msg.content || "";
+
             if (msg.role === "assistant" && emotion) {
                 setEmotionBackground(currentAgent, emotion);
             }
+
             scrollToBottom();
         }
     }
@@ -414,9 +459,9 @@ window.App = (() => {
             const res = await fetch(`http://127.0.0.1:5000/api/agents/${agent}`);
             const data = await res.json();
 
-            if (data.theme) {
+            if (window.Theme && data.theme) {
                 window.Theme.applyTheme(data.theme);
-            } else {
+            } else if (window.Theme) {
                 window.Theme.resetTheme();
             }
 
@@ -425,12 +470,18 @@ window.App = (() => {
             agentDisplayName.textContent = agent.replaceAll("_", " ");
         }
 
-        document.getElementById("selector-screen").classList.add("hidden");
-        document.getElementById("agents-screen").classList.add("hidden");
-        document.getElementById("create-agent-modal").classList.add("hidden");
-        document.getElementById("agents-password-modal").classList.add("hidden");
+        const selectorScreenEl = document.getElementById("selector-screen");
+        const agentsScreenEl = document.getElementById("agents-screen");
+        const createAgentModalEl = document.getElementById("create-agent-modal");
+        const agentsPasswordModalEl = document.getElementById("agents-password-modal");
+
+        if (selectorScreenEl) selectorScreenEl.classList.add("hidden");
+        if (agentsScreenEl) agentsScreenEl.classList.add("hidden");
+        if (createAgentModalEl) createAgentModalEl.classList.add("hidden");
+        if (agentsPasswordModalEl) agentsPasswordModalEl.classList.add("hidden");
 
         draggable.style.display = "flex";
+
         centerChat();
         await loadHistory();
     }
@@ -468,7 +519,7 @@ window.App = (() => {
             await loadHistory();
 
             if (d.scene_visual) {
-                window.Visuals.showSceneVisual(d.scene_visual);
+                showSceneVisual(d.scene_visual);
             }
         } catch (_) {
             appendMsg({
@@ -582,7 +633,7 @@ window.App = (() => {
                     await loadHistory();
 
                     if (d.scene_visual) {
-                        window.Visuals.showSceneVisual(d.scene_visual);
+                        showSceneVisual(d.scene_visual);
                     }
                 } catch (_) {
                     appendMsg({
@@ -667,9 +718,11 @@ window.App = (() => {
         const gap = 12;
 
         let panelLeft = chatRect.left - panelWidth - gap;
+
         if (panelLeft < 8) {
             panelLeft = chatRect.right + gap;
         }
+
         if (panelLeft + panelWidth > window.innerWidth - 8) {
             panelLeft = Math.max(8, window.innerWidth - panelWidth - 8);
         }
@@ -684,19 +737,46 @@ window.App = (() => {
     }
 
     function openProfilePanel() {
+        if (!profileSidePanel) return;
         profilePanelOpen = true;
         profileSidePanel.classList.remove("hidden");
         updateProfilePanelPosition();
     }
 
     function closeProfilePanel() {
+        if (!profileSidePanel) return;
         profilePanelOpen = false;
         profileSidePanel.classList.add("hidden");
     }
 
     function toggleProfilePanel() {
-        if (profilePanelOpen) closeProfilePanel();
-        else openProfilePanel();
+        if (profilePanelOpen) {
+            closeProfilePanel();
+        } else {
+            openProfilePanel();
+        }
+    }
+
+    function goBackToMenu() {
+        closeProfilePanel();
+        draggable.style.display = "none";
+        box.innerHTML = "";
+        currentAgent = "";
+        document.body.style.backgroundImage = "none";
+
+        if (window.Theme) {
+            window.Theme.resetTheme();
+        }
+
+        const selectorScreenEl = document.getElementById("selector-screen");
+        const agentsScreenEl = document.getElementById("agents-screen");
+        const createAgentModalEl = document.getElementById("create-agent-modal");
+        const agentsPasswordModalEl = document.getElementById("agents-password-modal");
+
+        if (selectorScreenEl) selectorScreenEl.classList.remove("hidden");
+        if (agentsScreenEl) agentsScreenEl.classList.add("hidden");
+        if (createAgentModalEl) createAgentModalEl.classList.add("hidden");
+        if (agentsPasswordModalEl) agentsPasswordModalEl.classList.add("hidden");
     }
 
     dragHandle.addEventListener("mousedown", (e) => {
@@ -715,8 +795,10 @@ window.App = (() => {
 
     window.addEventListener("mousemove", (e) => {
         if (!dragging) return;
+
         const newLeft = initialLeft + (e.clientX - startX);
         const newTop = initialTop + (e.clientY - startY);
+
         applyChatPosition(newLeft, newTop);
     });
 
@@ -731,23 +813,6 @@ window.App = (() => {
             applyChatPosition(rect.left, rect.top);
         }
     });
-
-    function goBackToMenu() {
-        closeProfilePanel();
-        draggable.style.display = "none";
-        box.innerHTML = "";
-        currentAgent = "";
-        window.Theme.resetTheme();
-        document.body.style.backgroundImage = "none";
-        document.getElementById("selector-screen").classList.remove("hidden");
-        document.getElementById("agents-screen").classList.add("hidden");
-        document.getElementById("create-agent-modal").classList.add("hidden");
-        document.getElementById("agents-password-modal").classList.add("hidden");
-    }
-
-    if (openKurisuBtn) {
-        openKurisuBtn.addEventListener("click", () => initAgent("Makise_Kurisu"));
-    }
 
     voiceBtn.addEventListener("click", toggleVoice);
     killBtn.addEventListener("click", killGVC);
@@ -764,7 +829,9 @@ window.App = (() => {
         toggleProfilePanel();
     });
 
-    chatBackBtn.addEventListener("click", goBackToMenu);
+    if (chatBackBtn) {
+        chatBackBtn.addEventListener("click", goBackToMenu);
+    }
 
     setVoiceStatus(false);
     setMicStatus(false);
@@ -772,6 +839,8 @@ window.App = (() => {
 
     return {
         initAgent,
-        goBackToMenu
+        goBackToMenu,
+        getCurrentAgent: () => currentAgent,
+        showSceneVisual,
     };
 })();
