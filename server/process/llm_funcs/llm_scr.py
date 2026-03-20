@@ -9,6 +9,7 @@ import base64
 from PIL import Image
 import io
 
+
 # --- 1. YOL AYARLARI ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../.."))
@@ -18,6 +19,9 @@ sys.path.append(SERVER_DIR)
 os.chdir(SERVER_DIR)
 
 from process.tts_func.sovits_ping import sovits_gen
+
+MEMORY_DIR = os.path.join(SERVER_DIR, "hafiza")
+os.makedirs(MEMORY_DIR, exist_ok=True)
 
 
 # --- 2. TEMİZLİK VE AYARLAR ---
@@ -52,6 +56,94 @@ SOUNDS_DIR = os.path.abspath(os.path.join(SERVER_DIR, "../capyweb/sounds"))
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
 GSV2_PATH = r"C:\SVG\GSv2pro"
+
+
+# --- 2.5 AGENT DOSYA YARDIMCILARI ---
+def safe_agent_folder_name(name):
+    if not name:
+        return "Unnamed_Agent"
+
+    name = unicodedata.normalize("NFKD", name)
+    name = name.encode("ascii", "ignore").decode("ascii")
+    name = re.sub(r"[^\w\s-]", "", name).strip()
+    name = re.sub(r"[-\s]+", "_", name)
+
+    return name or "Unnamed_Agent"
+
+
+def get_agent_dir(agent_name):
+    return os.path.join(UIGROUNDS_DIR, agent_name)
+
+
+def get_agent_json_path(agent_name):
+    return os.path.join(get_agent_dir(agent_name), "agent.json")
+
+
+def load_agent_data(agent_name):
+    agent_json = get_agent_json_path(agent_name)
+
+    if os.path.exists(agent_json):
+        with open(agent_json, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    return None
+
+
+def save_agent_data(agent_name, data):
+    agent_dir = get_agent_dir(agent_name)
+    os.makedirs(agent_dir, exist_ok=True)
+
+    with open(get_agent_json_path(agent_name), "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def list_available_agents():
+    agents = []
+
+    if not os.path.exists(UIGROUNDS_DIR):
+        return agents
+
+    for item in os.listdir(UIGROUNDS_DIR):
+        agent_dir = os.path.join(UIGROUNDS_DIR, item)
+
+        if not os.path.isdir(agent_dir):
+            continue
+
+        agent_json = os.path.join(agent_dir, "agent.json")
+        if not os.path.exists(agent_json):
+            continue
+
+        try:
+            with open(agent_json, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            profile_url = None
+            for ext in ["jpg", "png", "jpeg", "webp"]:
+                profile_path = os.path.join(agent_dir, f"profile.{ext}")
+                if os.path.exists(profile_path):
+                    profile_url = (
+                        f"http://127.0.0.1:5000/uigrounds/{item}/profile.{ext}"
+                    )
+                    break
+
+            agents.append(
+                {
+                    "name": data.get("name", item),
+                    "display_name": data.get("display_name", item.replace("_", " ")),
+                    "age": data.get("age", ""),
+                    "personality": data.get("personality", ""),
+                    "backstory": data.get("backstory", ""),
+                    "first_meeting": data.get("first_meeting", ""),
+                    "theme": data.get("theme", {}),
+                    "profile_url": profile_url,
+                }
+            )
+
+        except Exception as e:
+            print(f"Agent load error ({item}): {e}")
+
+    agents.sort(key=lambda x: x["display_name"].lower())
+    return agents
 
 
 # --- 3. VİZYON MOTORU (İNGİLİZCE QWEN) ---
@@ -105,6 +197,7 @@ def get_vision_analysis(user_msg, page_no=None, direct_b64=None):
 
 
 # --- 4. BEYİN FONKSİYONU ---
+# --- 4. BEYİN FONKSİYONU ---
 def get_logic(agent, txt, image_b64=None):
     now = datetime.datetime.now(pytz.timezone("Europe/Istanbul"))
     current_time = now.strftime("%H:%M")
@@ -116,14 +209,22 @@ def get_logic(agent, txt, image_b64=None):
             "Send a short message staying in character.]"
         )
 
-    f = f"{agent}.json"
+    f = os.path.join(MEMORY_DIR, f"{agent}.json")
 
     if os.path.exists(f):
         with open(f, "r", encoding="utf-8") as file:
             h = json.load(file)
     else:
-        agent_data = config_db.get(agent, config_db.get("Default_Agent"))
-        system_prompt = agent_data.get("system_prompt", "You are an AI assistant.")
+        agent_data = load_agent_data(agent)
+
+        if agent_data:
+            system_prompt = agent_data.get("system_prompt", "You are an AI assistant.")
+        else:
+            fallback_agent = config_db.get(agent, config_db.get("Default_Agent", {}))
+            system_prompt = fallback_agent.get(
+                "system_prompt", "You are an AI assistant."
+            )
+
         h = [{"role": "system", "content": system_prompt.strip()}]
 
     if image_b64:
@@ -154,11 +255,17 @@ def get_logic(agent, txt, image_b64=None):
     # --- İNGİLİZCE KATI KURALLAR ---
     if len(messages_to_send) > 0 and messages_to_send[0]["role"] == "system":
         messages_to_send[0]["content"] += (
-            f"\n\n[SYSTEM RULE: 1) SPEAK ONLY IN ENGLISH. "
-            "2) Do not act like a grammar police. "
-            "3) NEVER use translation notes. "
-            f"4) Current Time: {now.strftime('%H:%M')} "
-            "5) Put physical actions and expressions inside *asterisks*.]"
+            "\n\n[SYSTEM ROLEPLAY RULES:"
+            "1) NEVER introduce yourself repeatedly."
+            "2) DO NOT explain your personality unless asked."
+            "3) ALWAYS stay in the moment."
+            "4) ALWAYS respond with actions and dialogue."
+            "5) Use *actions* frequently."
+            "6) MOVE the scene forward every message."
+            "7) DO NOT repeat backstory."
+            "8) Be proactive, not passive."
+            "9) If user says something simple, expand it into a scene."
+            "10) Keep responses immersive and continuous.]"
         )
 
     r = client.chat.completions.create(
@@ -305,12 +412,109 @@ def voice_chat():
 @app.route("/api/clear_history", methods=["POST"])
 def clear_history():
     agent = request.args.get("agent", "Makise_Kurisu")
-    f = f"{agent}.json"
+    f = os.path.join(MEMORY_DIR, f"{agent}.json")
 
     if os.path.exists(f):
         os.remove(f)
 
     return jsonify({"status": "success"})
+
+
+@app.route("/api/agents", methods=["GET"])
+def api_list_agents():
+    try:
+        return jsonify({"agents": list_available_agents()})
+    except Exception as e:
+        print(f"Agents list error: {e}")
+        return jsonify({"agents": []}), 500
+
+
+@app.route("/api/agents/<agent_name>", methods=["GET"])
+def api_get_agent(agent_name):
+    try:
+        data = load_agent_data(agent_name)
+        if not data:
+            return jsonify({"error": "Agent not found"}), 404
+        return jsonify(data)
+    except Exception as e:
+        print(f"Agent get error: {e}")
+        return jsonify({"error": "Failed to load agent"}), 500
+
+
+@app.route("/api/agents/create", methods=["POST"])
+def api_create_agent():
+    try:
+        raw_name = request.form.get("name", "").strip()
+        display_name = request.form.get("display_name", "").strip()
+        age = request.form.get("age", "").strip()
+        personality = request.form.get("personality", "").strip()
+        backstory = request.form.get("backstory", "").strip()
+        first_meeting = request.form.get("first_meeting", "").strip()
+        system_prompt = request.form.get("system_prompt", "").strip()
+        accent = request.form.get("accent", "#a10000").strip()
+        accent2 = request.form.get("accent2", "#ff1b1b").strip()
+        panel = request.form.get("panel", "rgba(12, 6, 6, 0.94)").strip()
+        text_color = request.form.get("text", "#eeeeee").strip()
+
+        if not raw_name:
+            return jsonify({"error": "Agent name is required"}), 400
+
+        agent_name = safe_agent_folder_name(raw_name)
+        agent_dir = get_agent_dir(agent_name)
+
+        if os.path.exists(agent_dir):
+            return jsonify({"error": "An agent with this name already exists"}), 400
+
+        os.makedirs(agent_dir, exist_ok=True)
+
+        profile_file = request.files.get("profile_image")
+        background_file = request.files.get("background_image")
+
+        if profile_file and profile_file.filename:
+            profile_ext = os.path.splitext(profile_file.filename)[1].lower() or ".jpg"
+            profile_save_path = os.path.join(agent_dir, f"profile{profile_ext}")
+            profile_file.save(profile_save_path)
+
+        if background_file and background_file.filename:
+            bg_ext = os.path.splitext(background_file.filename)[1].lower() or ".jpg"
+            bg_save_path = os.path.join(agent_dir, f"background{bg_ext}")
+            background_file.save(bg_save_path)
+
+        if not display_name:
+            display_name = raw_name
+
+        if not system_prompt:
+            system_prompt = (
+                f"You are {display_name}. "
+                f"Your personality: {personality}. "
+                f"Your backstory: {backstory}. "
+                f"How you first met the user: {first_meeting}. "
+                "Always reply in natural, conversational English."
+            )
+
+        agent_data = {
+            "name": agent_name,
+            "display_name": display_name,
+            "age": age,
+            "personality": personality,
+            "backstory": backstory,
+            "first_meeting": first_meeting,
+            "system_prompt": system_prompt,
+            "theme": {
+                "accent": accent,
+                "accent2": accent2,
+                "panel": panel,
+                "text": text_color,
+            },
+        }
+
+        save_agent_data(agent_name, agent_data)
+
+        return jsonify({"status": "success", "agent": agent_data})
+
+    except Exception as e:
+        print(f"Create agent error: {e}")
+        return jsonify({"error": "Failed to create agent"}), 500
 
 
 def is_port_open(port):
