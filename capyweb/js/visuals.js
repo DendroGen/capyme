@@ -1,25 +1,46 @@
 window.Visuals = (() => {
-    const chatEmotionBg = document.getElementById("chat-emotion-bg");
+    let overlay = null;
+    let hideTimer = null;
 
-    function clearSceneVisual() {
-        if (!chatEmotionBg) return;
-        chatEmotionBg.style.backgroundImage = "";
-        chatEmotionBg.classList.remove("show");
+    function ensureOverlay() {
+        if (overlay) return overlay;
+
+        overlay = document.createElement("div");
+        overlay.className = "scene-visual-overlay";
+
+        const img = document.createElement("img");
+        img.className = "scene-visual-image";
+        img.alt = "scene visual";
+
+        const caption = document.createElement("div");
+        caption.className = "scene-visual-caption";
+
+        overlay.appendChild(img);
+        overlay.appendChild(caption);
+        document.body.appendChild(overlay);
+
+        return overlay;
     }
 
-    function applySceneVisual(sceneVisual) {
-        if (!chatEmotionBg) return;
-        if (!sceneVisual || !sceneVisual.image_url) {
-            clearSceneVisual();
-            return;
-        }
+    function showSceneVisual(sceneVisual) {
+        if (!sceneVisual || !sceneVisual.image_url) return;
 
-        chatEmotionBg.style.backgroundImage = `url('${sceneVisual.image_url}')`;
-        chatEmotionBg.classList.add("show");
+        const el = ensureOverlay();
+        const img = el.querySelector(".scene-visual-image");
+        const caption = el.querySelector(".scene-visual-caption");
+
+        img.src = sceneVisual.image_url;
+        caption.textContent = sceneVisual.label || sceneVisual.description || "";
+
+        clearTimeout(hideTimer);
+        el.classList.add("show");
+
+        hideTimer = setTimeout(() => {
+            el.classList.remove("show");
+        }, 15000);
     }
 
     return {
-        applySceneVisual,
-        clearSceneVisual,
+        showSceneVisual,
     };
 })();

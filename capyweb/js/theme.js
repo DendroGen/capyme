@@ -1,44 +1,48 @@
-window.ThemeManager = (() => {
-    function applyTheme(theme = {}) {
-        const root = document.documentElement;
+window.UIState = (() => {
+    const selectorScreen = document.getElementById("selector-screen");
+    const agentsScreen = document.getElementById("agents-screen");
+    const createAgentModal = document.getElementById("create-agent-modal");
+    const agentsPasswordModal = document.getElementById("agents-password-modal");
+    const draggable = document.getElementById("draggable");
 
-        if (theme.accent) {
-            root.style.setProperty("--accent", theme.accent);
-            root.style.setProperty("--border", theme.accent);
-        }
-
-        if (theme.accent2) {
-            root.style.setProperty("--accent2", theme.accent2);
-            root.style.setProperty("--accent-2", theme.accent2);
-            root.style.setProperty("--nixie", theme.accent2);
-        }
-
-        if (theme.panel) {
-            root.style.setProperty("--panel", theme.panel);
-            root.style.setProperty("--panel-2", theme.panel);
-        }
-
-        if (theme.text) {
-            root.style.setProperty("--text", theme.text);
-            root.style.setProperty("--muted", theme.text);
-        }
+    function showMainMenu() {
+        if (selectorScreen) selectorScreen.classList.remove("hidden");
+        if (agentsScreen) agentsScreen.classList.add("hidden");
+        if (createAgentModal) createAgentModal.classList.add("hidden");
+        if (agentsPasswordModal) agentsPasswordModal.classList.add("hidden");
+        if (draggable) draggable.style.display = "none";
     }
 
-    function resetTheme() {
-        const root = document.documentElement;
-        root.style.setProperty("--accent", "#a10000");
-        root.style.setProperty("--accent2", "#ff1b1b");
-        root.style.setProperty("--accent-2", "#ff1b1b");
-        root.style.setProperty("--panel", "rgba(12, 6, 6, 0.94)");
-        root.style.setProperty("--panel-2", "rgba(18, 9, 9, 0.92)");
-        root.style.setProperty("--text", "#eeeeee");
-        root.style.setProperty("--muted", "#8c8c8c");
-        root.style.setProperty("--border", "rgba(255, 0, 0, 0.45)");
-        root.style.setProperty("--nixie", "#ff4400");
+    function showAgentsScreen() {
+        if (selectorScreen) selectorScreen.classList.add("hidden");
+        if (agentsScreen) agentsScreen.classList.remove("hidden");
+        if (createAgentModal) createAgentModal.classList.add("hidden");
+        if (agentsPasswordModal) agentsPasswordModal.classList.add("hidden");
+        if (draggable) draggable.style.display = "none";
+    }
+
+    function showCreateAgentModal() {
+        if (createAgentModal) createAgentModal.classList.remove("hidden");
+    }
+
+    function hideCreateAgentModal() {
+        if (createAgentModal) createAgentModal.classList.add("hidden");
+    }
+
+    function showAgentsPasswordModal() {
+        if (agentsPasswordModal) agentsPasswordModal.classList.remove("hidden");
+    }
+
+    function hideAgentsPasswordModal() {
+        if (agentsPasswordModal) agentsPasswordModal.classList.add("hidden");
     }
 
     return {
-        applyTheme,
-        resetTheme,
+        showMainMenu,
+        showAgentsScreen,
+        showCreateAgentModal,
+        hideCreateAgentModal,
+        showAgentsPasswordModal,
+        hideAgentsPasswordModal,
     };
 })();

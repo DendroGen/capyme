@@ -9,9 +9,12 @@ window.Agents = (() => {
     const agentsPasswordInput = document.getElementById("agents-password-input");
     const agentsPasswordConfirmBtn = document.getElementById("agents-password-confirm-btn");
     const agentsPasswordCancelBtn = document.getElementById("agents-password-cancel-btn");
+    const addPoseRowBtn = document.getElementById("add-pose-row-btn");
+    const addEmotionRowBtn = document.getElementById("add-emotion-row-btn");
 
     let cachedAgents = [];
     let agentsPassword = "";
+    let editingAgentName = null;
 
     function getPassword() {
         return agentsPassword;
@@ -33,6 +36,18 @@ window.Agents = (() => {
                 <div class="agent-browser-content">
                     <div class="agent-browser-title">${agent.display_name}</div>
                     <div class="agent-browser-sub">${personality}${personality.length >= 95 ? "..." : ""}</div>
+
+                    <div class="agent-browser-actions">
+                        <button type="button" class="agent-mini-btn open-chat-btn" data-agent-name="${agent.name}">
+                            Open
+                        </button>
+                        <button type="button" class="agent-mini-btn open-settings-btn" data-agent-name="${agent.name}">
+                            Settings
+                        </button>
+                        <button type="button" class="agent-mini-btn delete-agent-btn" data-agent-name="${agent.name}">
+                            Delete
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -63,14 +78,51 @@ window.Agents = (() => {
         const createCardEl = document.getElementById("agent-create-card");
         if (createCardEl) {
             createCardEl.addEventListener("click", () => {
+                resetCreateFormForNewAgent();
                 window.UIState.showCreateAgentModal();
             });
         }
 
-        document.querySelectorAll(".real-agent-card").forEach(card => {
-            card.addEventListener("click", () => {
-                const agentName = card.dataset.agentName;
+        document.querySelectorAll(".open-chat-btn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const agentName = btn.dataset.agentName;
                 window.App.initAgent(agentName);
+            });
+        });
+
+        document.querySelectorAll(".open-settings-btn").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const agentName = btn.dataset.agentName;
+                await openAgentSettings(agentName);
+            });
+        });
+
+        document.querySelectorAll(".delete-agent-btn").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const agentName = btn.dataset.agentName;
+                const ok = confirm(`${agentName} tamamen silinsin mi? Bu işlem geri alınmaz.`);
+                if (!ok) return;
+
+                try {
+                    const res = await fetch(`http://127.0.0.1:5000/api/agents/${agentName}`, {
+                        method: "DELETE",
+                        headers: getAuthHeaders()
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok) {
+                        alert(data.error || "Silinemedi.");
+                        return;
+                    }
+
+                    await fetchAgents();
+                } catch (err) {
+                    console.error(err);
+                    alert("Ajan silinemedi.");
+                }
             });
         });
     }
@@ -97,6 +149,215 @@ window.Agents = (() => {
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
+    function rgbaToHexSafe(rgba) {
+        if (!rgba) return null;
+        const match = rgba.match(/\d+/g);
+        if (!match || match.length < 3) return null;
+
+        const r = parseInt(match[0], 10).toString(16).padStart(2, "0");
+        const g = parseInt(match[1], 10).toString(16).padStart(2, "0");
+        const b = parseInt(match[2], 10).toString(16).padStart(2, "0");
+
+        return `#${r}${g}${b}`;
+    }
+
+    function makeVisualRow(type, index, item = {}) {
+        const isPose = type === "pose";
+        const preview = item.image_url
+            ? `<div class="visual-preview-card">
+                    <img src="${item.image_url}" class="visual-preview-image" alt="${item.label || ""}">
+                    <button type="button" class="agent-mini-btn delete-visual-btn"
+                        data-kind="${isPose ? "poses" : "emotions"}"
+                        data-key="${item.key || ""}">
+                        Delete
+                    </button>
+               </div>`
+            : "";
+
+        return `
+            <div class="visual-row">
+                <div class="form-group">
+                    <label>${isPose ? "Poz Resmi" : "Duygu Resmi"}</label>
+                    <input type="file" name="${type}_image_${index}" accept="image/*">
+                </div>
+
+                <div class="form-group">
+                    <label>${isPose ? "Poz İsmi" : "Duygu İsmi"}</label>
+                    <input type="text" name="${type}_label_${index}" value="${item.label || ""}" placeholder="${isPose ? "Ayakta yakın" : "Utanmış hafif"}">
+                </div>
+
+                <div class="form-group full">
+                    <label>${isPose ? "Poz Açıklaması" : "Duygu Açıklaması"}</label>
+                    <textarea name="${type}_description_${index}" rows="3">${item.description || ""}</textarea>
+                </div>
+
+                <div class="form-group full">
+                    <label>Taglar</label>
+                    <input type="text" name="${type}_triggers_${index}" value="${(item.triggers || []).join(",")}" placeholder="${isPose ? "ayak,kıyafet,ayakta,oturuyor" : "utanmış,mahcup,blush"}">
+                </div>
+
+                <input type="hidden" name="${type}_existing_key_${index}" value="${item.key || ""}">
+                ${preview}
+            </div>
+        `;
+    }
+
+    function bindDeleteVisualButtons() {
+        document.querySelectorAll(".delete-visual-btn").forEach(btn => {
+            btn.onclick = async () => {
+                if (!editingAgentName) return;
+
+                const kind = btn.dataset.kind;
+                const key = btn.dataset.key;
+                const ok = confirm("Bu visual silinsin mi?");
+                if (!ok) return;
+
+                try {
+                    const res = await fetch(`http://127.0.0.1:5000/api/agents/${editingAgentName}/visuals/${kind}/${encodeURIComponent(key)}`, {
+                        method: "DELETE",
+                        headers: getAuthHeaders()
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok) {
+                        alert(data.error || "Silinemedi");
+                        return;
+                    }
+
+                    await openAgentSettings(editingAgentName);
+                } catch (e) {
+                    console.error(e);
+                    alert("Silinemedi");
+                }
+            };
+        });
+    }
+
+    function fillVisualRows(type, items) {
+        const container = document.getElementById(type === "pose" ? "pose-rows" : "emotion-rows");
+        if (!container) return;
+
+        if (!items || !items.length) {
+            container.innerHTML = makeVisualRow(type, 0);
+            return;
+        }
+
+        container.innerHTML = items.map((item, i) => makeVisualRow(type, i, item)).join("");
+        bindDeleteVisualButtons();
+    }
+
+    function resetCreateFormForNewAgent() {
+        if (!createAgentForm) return;
+        editingAgentName = null;
+        createAgentForm.reset();
+
+        let originalName = document.getElementById("original-agent-name");
+        if (!originalName) {
+            originalName = document.createElement("input");
+            originalName.type = "hidden";
+            originalName.id = "original-agent-name";
+            originalName.name = "original_name";
+            createAgentForm.appendChild(originalName);
+        }
+        originalName.value = "";
+
+        const panelColor = document.getElementById("panelColor");
+        if (panelColor) panelColor.value = "#0c0606";
+
+        fillVisualRows("pose", []);
+        fillVisualRows("emotion", []);
+    }
+
+    async function uploadVisualRows(agentName, type) {
+        const container = document.getElementById(type === "pose" ? "pose-rows" : "emotion-rows");
+        if (!container) return;
+
+        const rows = [...container.querySelectorAll(".visual-row")];
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+
+            const imageInput = row.querySelector(`input[name="${type}_image_${i}"]`);
+            const labelInput = row.querySelector(`input[name="${type}_label_${i}"]`);
+            const descInput = row.querySelector(`textarea[name="${type}_description_${i}"]`);
+            const trigInput = row.querySelector(`input[name="${type}_triggers_${i}"]`);
+
+            if (!imageInput || !imageInput.files || !imageInput.files[0]) continue;
+
+            const fd = new FormData();
+            fd.append("image", imageInput.files[0]);
+            fd.append("label", labelInput?.value || "");
+            fd.append("description", descInput?.value || "");
+            fd.append("triggers", trigInput?.value || "");
+
+            const endpoint = type === "pose"
+                ? `http://127.0.0.1:5000/api/agents/${agentName}/pose/add`
+                : `http://127.0.0.1:5000/api/agents/${agentName}/emotion/add`;
+
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: fd
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                console.error(`${type} upload error:`, data);
+            }
+        }
+    }
+
+    async function openAgentSettings(agentName) {
+        try {
+            const res = await fetch(`http://127.0.0.1:5000/api/agents/${agentName}`, {
+                headers: getAuthHeaders()
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error || "Agent settings yüklenemedi.");
+                return;
+            }
+
+            editingAgentName = agentName;
+            window.UIState.showCreateAgentModal();
+
+            let originalName = document.getElementById("original-agent-name");
+            if (!originalName) {
+                originalName = document.createElement("input");
+                originalName.type = "hidden";
+                originalName.id = "original-agent-name";
+                originalName.name = "original_name";
+                createAgentForm.appendChild(originalName);
+            }
+            originalName.value = data.name || "";
+
+            document.getElementById("agent-name").value = data.name || "";
+            document.getElementById("agent-display-name-input").value = data.display_name || "";
+            document.getElementById("agent-age").value = data.age || "";
+            document.getElementById("agent-personality").value = data.personality || "";
+            document.getElementById("agent-backstory").value = data.backstory || "";
+            document.getElementById("agent-first-meeting").value = data.first_meeting || "";
+            document.getElementById("agent-system-prompt").value = data.system_prompt || "";
+
+            if (data.theme?.accent) document.getElementById("agent-accent").value = data.theme.accent;
+            if (data.theme?.accent2) document.getElementById("agent-accent2").value = data.theme.accent2;
+            if (data.theme?.text) document.getElementById("agent-text-color").value = data.theme.text;
+
+            if (data.theme?.panel) {
+                const hex = rgbaToHexSafe(data.theme.panel);
+                if (hex) document.getElementById("panelColor").value = hex;
+            }
+
+            fillVisualRows("pose", data.poses || []);
+            fillVisualRows("emotion", data.emotions || []);
+        } catch (err) {
+            console.error(err);
+            alert("Settings yüklenemedi.");
+        }
+    }
+
     async function handleCreateAgentSubmit(e) {
         e.preventDefault();
         if (!createAgentForm) return;
@@ -111,7 +372,7 @@ window.Agents = (() => {
 
         if (saveBtn) {
             saveBtn.disabled = true;
-            saveBtn.textContent = "Saving...";
+            saveBtn.textContent = editingAgentName ? "Updating..." : "Saving...";
         }
 
         try {
@@ -129,23 +390,29 @@ window.Agents = (() => {
             }
 
             if (!res.ok) {
-                alert(data.error || "Failed to create agent.");
+                alert(data.error || "Failed to save agent.");
                 return;
             }
 
+            const savedAgentName = data.agent.name;
+
+            await uploadVisualRows(savedAgentName, "pose");
+            await uploadVisualRows(savedAgentName, "emotion");
+
             window.UIState.hideCreateAgentModal();
             createAgentForm.reset();
+            editingAgentName = null;
+            fillVisualRows("pose", []);
+            fillVisualRows("emotion", []);
             await fetchAgents();
 
-            if (data.agent && data.agent.name) {
-                const openNow = confirm(`${data.agent.display_name || data.agent.name} created successfully. Open chat now?`);
-                if (openNow) {
-                    window.App.initAgent(data.agent.name);
-                }
+            const openNow = confirm(`${data.agent.display_name || data.agent.name} saved successfully. Open chat now?`);
+            if (openNow) {
+                window.App.initAgent(data.agent.name);
             }
         } catch (err) {
-            console.error("Create agent error:", err);
-            alert("Could not create agent.");
+            console.error("Save agent error:", err);
+            alert("Could not save agent.");
         } finally {
             if (saveBtn) {
                 saveBtn.disabled = false;
@@ -239,8 +506,26 @@ window.Agents = (() => {
                 }
             });
         }
+
+        if (addPoseRowBtn) {
+            addPoseRowBtn.addEventListener("click", () => {
+                const container = document.getElementById("pose-rows");
+                const index = container.children.length;
+                container.insertAdjacentHTML("beforeend", makeVisualRow("pose", index));
+            });
+        }
+
+        if (addEmotionRowBtn) {
+            addEmotionRowBtn.addEventListener("click", () => {
+                const container = document.getElementById("emotion-rows");
+                const index = container.children.length;
+                container.insertAdjacentHTML("beforeend", makeVisualRow("emotion", index));
+            });
+        }
     }
 
+    fillVisualRows("pose", []);
+    fillVisualRows("emotion", []);
     bindEvents();
 
     return {

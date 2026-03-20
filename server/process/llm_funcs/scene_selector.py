@@ -45,10 +45,6 @@ def choose_best_visual(
 def choose_scene_visual(
     reply_text: str, poses: List[Dict[str, Any]], emotions: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
-    """
-    Önce pose dene. Yeterince güçlü eşleşme yoksa emotion dene.
-    Hiçbiri yoksa boş dön.
-    """
     pose = choose_best_visual(reply_text, poses, min_score=6)
     if pose:
         return {

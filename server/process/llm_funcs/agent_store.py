@@ -157,3 +157,28 @@ class AgentStore:
         folder = self.get_poses_dir(agent_name)
         base_url = f"http://127.0.0.1:5000/uigrounds/{agent_name}/poses"
         return self._load_visual_items(folder, base_url)
+
+
+@staticmethod
+def save_visual_image(agent, category, filename, file):
+    base = os.path.join("uigrounds", agent, category)
+    os.makedirs(base, exist_ok=True)
+
+    path = os.path.join(base, filename)
+    file.save(path)
+
+    return f"http://127.0.0.1:5000/uigrounds/{agent}/{category}/{filename}"
+
+
+@staticmethod
+def add_emotion(agent, emotion):
+    data = AgentStore.load_agent(agent)
+    data.setdefault("emotions", []).append(emotion)
+    AgentStore.save_agent(agent, data)
+
+
+@staticmethod
+def add_pose(agent, pose):
+    data = AgentStore.load_agent(agent)
+    data.setdefault("poses", []).append(pose)
+    AgentStore.save_agent(agent, data)

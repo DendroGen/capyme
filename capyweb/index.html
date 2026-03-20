@@ -8,7 +8,6 @@
 </head>
 <body>
 
-    <!-- GLOBAL BACKGROUND EFFECTS -->
     <div id="bg-dim"></div>
     <div id="scanlines"></div>
 
@@ -18,7 +17,7 @@
         <div class="selector-subtitle">Select an active cognition profile</div>
 
         <div class="main-menu-grid">
-            <div class="main-menu-card featured" onclick="App.initAgent('Makise_Kurisu')">
+            <div class="main-menu-card featured" id="open-kurisu-btn">
                 <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg" alt="Makise Kurisu">
                 <div class="main-menu-label">
                     <div class="main-menu-title">Makise Kurisu</div>
@@ -30,19 +29,19 @@
                 <img src="http://127.0.0.1:5000/uigrounds/ajanos.jpg" alt="Ajanlar">
                 <div class="main-menu-label">
                     <div class="main-menu-title">Ajanlar</div>
-                    <div class="main-menu-desc">Oluşturulmuş ajanları gör ve seç</div>
+                    <div class="main-menu-desc">Oluşturulmuş ajanları gör, düzenle ve seç</div>
                 </div>
             </div>
 
-            <div class="main-menu-card disabled-card">
+            <div class="main-menu-card disabled-card" id="open-notes-btn">
                 <div class="notes-placeholder">
                     <div class="notes-icon">✦</div>
                     <div class="main-menu-title">Notlarım</div>
-                    <div class="main-menu-desc">Yakında eklenecek</div>
+                    <div class="main-menu-desc">Hazır alan</div>
                 </div>
             </div>
 
-            <div class="main-menu-card disabled-card">
+            <div class="main-menu-card disabled-card" id="open-agent-game-btn">
                 <div class="notes-placeholder">
                     <div class="notes-icon">🎮</div>
                     <div class="main-menu-title">Ajan Oyunu</div>
@@ -67,30 +66,34 @@
     <div id="agents-password-modal" class="modal hidden">
         <div class="modal-panel password-panel">
             <div class="modal-header">
-                <div class="modal-title">AJANIN ŞİFRESİ</div>
+                <div class="modal-title">AJAN ŞİFRESİ</div>
             </div>
 
-            <div class="form-group full">
-                <label for="agents-password-input">Şifre</label>
-                <input id="agents-password-input" type="password" placeholder="Şifrenizi girin">
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label for="agents-password-input">Şifre</label>
+                    <input id="agents-password-input" type="password" placeholder="Şifrenizi girin">
+                </div>
             </div>
 
             <div class="form-actions">
-                <button type="button" class="btn secondary" id="agents-password-cancel-btn">İptal etmek</button>
-                <button type="button" class="btn" id="agents-password-confirm-btn">Açık</button>
+                <button type="button" class="btn secondary" id="agents-password-cancel-btn">İptal</button>
+                <button type="button" class="btn" id="agents-password-confirm-btn">Aç</button>
             </div>
         </div>
     </div>
 
-    <!-- CREATE AGENT MODAL -->
+    <!-- CREATE / EDIT AGENT MODAL -->
     <div id="create-agent-modal" class="modal hidden">
         <div class="modal-panel">
             <div class="modal-header">
-                <div class="modal-title">CREATE NEW AGENT</div>
+                <div class="modal-title" id="agent-modal-title">CREATE / EDIT AGENT</div>
                 <button id="close-create-agent-btn" class="modal-close-btn" type="button">✕</button>
             </div>
 
             <form id="create-agent-form" class="create-agent-form">
+                <input type="hidden" id="original-agent-name" name="original_name">
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="agent-name">Agent Folder Name</label>
@@ -150,17 +153,47 @@
                     <div class="form-group">
                         <label for="agent-profile-image">Profile Image</label>
                         <input id="agent-profile-image" name="profile_image" type="file" accept="image/*">
+                        <div id="current-profile-preview" class="current-preview hidden"></div>
                     </div>
 
                     <div class="form-group">
                         <label for="agent-background-image">Background Image</label>
                         <input id="agent-background-image" name="background_image" type="file" accept="image/*">
+                        <div id="current-background-preview" class="current-preview hidden"></div>
+                    </div>
+
+                    <div class="form-group full">
+                        <div class="section-title">Visual Scene Setup</div>
+                        <div class="section-desc">
+                            Poz ve duygu görselleri ekleyebilirsin. Sistem cevap içeriğine göre uygun olanı seçmeye çalışır.
+                        </div>
+                    </div>
+
+                    <!-- POSES -->
+                    <div class="form-group full visual-block">
+                        <div class="visual-block-header">
+                            <div class="visual-block-title">Pozlar</div>
+                            <button type="button" class="btn secondary small-btn" id="add-pose-row-btn">+ Poz Ekle</button>
+                        </div>
+                        <div id="pose-rows" class="visual-rows"></div>
+                    </div>
+
+                    <!-- EMOTIONS -->
+                    <div class="form-group full visual-block">
+                        <div class="visual-block-header">
+                            <div class="visual-block-title">Duygular</div>
+                            <button type="button" class="btn secondary small-btn" id="add-emotion-row-btn">+ Duygu Ekle</button>
+                        </div>
+                        <div id="emotion-rows" class="visual-rows"></div>
                     </div>
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" class="btn secondary" id="cancel-create-agent-btn">Cancel</button>
-                    <button type="submit" class="btn" id="save-agent-btn">Save Agent</button>
+                    <button type="button" class="btn danger" id="delete-agent-btn">Ajanı Sil</button>
+                    <div class="form-actions-right">
+                        <button type="button" class="btn secondary" id="cancel-create-agent-btn">Cancel</button>
+                        <button type="submit" class="btn" id="save-agent-btn">Save Agent</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -197,7 +230,6 @@
             <div class="wave-holder" id="wave-holder">
                 <canvas id="wave"></canvas>
             </div>
-
             <div class="messages" id="box"></div>
         </div>
 
@@ -232,7 +264,7 @@
     <script src="js/ui_state.js"></script>
     <script src="js/theme.js"></script>
     <script src="js/visuals.js"></script>
-    <script src="js/app.js"></script>
     <script src="js/agents.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
