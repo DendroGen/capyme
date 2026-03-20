@@ -255,23 +255,23 @@ def get_logic(agent, txt, image_b64=None):
     # --- İNGİLİZCE KATI KURALLAR ---
     if len(messages_to_send) > 0 and messages_to_send[0]["role"] == "system":
         messages_to_send[0]["content"] += (
-            "\n\n[SYSTEM ROLEPLAY RULES:"
-            "1) NEVER introduce yourself repeatedly."
-            "2) DO NOT explain your personality unless asked."
-            "3) ALWAYS stay in the moment."
-            "4) ALWAYS respond with actions and dialogue."
-            "5) Use *actions* frequently."
-            "6) MOVE the scene forward every message."
-            "7) DO NOT repeat backstory."
-            "8) Be proactive, not passive."
-            "9) If user says something simple, expand it into a scene."
-            "10) Keep responses immersive and continuous.]"
+            "\n\n[ROLEPLAY ENGINE:"
+            "Stay in the scene."
+            "Do not repeat backstory."
+            "Do not introduce yourself again."
+            "Use both actions and dialogue."
+            "Each reply MUST include at least 2 actions."
+            "Each reply should be 2-4 sentences."
+            "Move the scene forward logically."
+            "React directly to the user's last message."
+            "Do not stall or freeze."
+            "No emojis.]"
         )
 
     r = client.chat.completions.create(
         model=MODEL_NAME,
         messages=messages_to_send,
-        extra_body={"options": {"temperature": 0.6, "repeat_penalty": 1.15}},
+        extra_body={"options": {"temperature": 0.7, "repeat_penalty": 1.15}},
     )
 
     ai = r.choices[0].message.content
@@ -541,10 +541,14 @@ def serve_sounds(filename):
 def history():
     agent = request.args.get("agent", "Makise_Kurisu")
 
-    if os.path.exists(f"{agent}.json"):
-        with open(f"{agent}.json", "r", encoding="utf-8") as f:
+    f = os.path.join(MEMORY_DIR, f"{agent}.json")
+
+    print("HISTORY PATH:", f)  # DEBUG
+
+    if os.path.exists(f):
+        with open(f, "r", encoding="utf-8") as file:
             return jsonify(
-                {"history": [m for m in json.load(f) if m["role"] != "system"]}
+                {"history": [m for m in json.load(file) if m["role"] != "system"]}
             )
 
     return jsonify({"history": []})

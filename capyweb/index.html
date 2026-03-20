@@ -8,146 +8,157 @@
 </head>
 <body>
 
-    <!-- # GLOBAL BACKGROUND EFFECTS -->
+    <!-- GLOBAL BACKGROUND EFFECTS -->
     <div id="bg-dim"></div>
     <div id="scanlines"></div>
 
-<!-- # MAIN MENU -->
-<div id="selector-screen">
-    <div class="selector-title">AMADEUS AGENT DATABASE</div>
-    <div class="selector-subtitle">Select an active cognition profile</div>
+    <!-- MAIN MENU -->
+    <div id="selector-screen">
+        <div class="selector-title">AMADEUS AGENT DATABASE</div>
+        <div class="selector-subtitle">Select an active cognition profile</div>
 
-    <div class="main-menu-grid">
-        <div class="main-menu-card featured" onclick="initAgent('Makise_Kurisu')">
-            <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg" alt="Makise Kurisu">
-            <div class="main-menu-label">
-                <div class="main-menu-title">Makise Kurisu</div>
-                <div class="main-menu-desc">Open direct synchronized chat session</div>
+        <div class="main-menu-grid">
+            <div class="main-menu-card featured" onclick="initAgent('Makise_Kurisu')">
+                <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg" alt="Makise Kurisu">
+                <div class="main-menu-label">
+                    <div class="main-menu-title">Makise Kurisu</div>
+                    <div class="main-menu-desc">Open direct synchronized chat session</div>
+                </div>
             </div>
-        </div>
 
-        <div class="main-menu-card" id="open-agents-btn">
-            <img src="http://127.0.0.1:5000/uigrounds/ajanos.jpg" alt="Ajanlar">
-            <div class="main-menu-label">
-                <div class="main-menu-title">Ajanlar</div>
-                <div class="main-menu-desc">Browse and select created agents</div>
+            <div class="main-menu-card" id="open-agents-btn">
+                <img src="http://127.0.0.1:5000/uigrounds/ajanos.jpg" alt="Ajanlar">
+                <div class="main-menu-label">
+                    <div class="main-menu-title">Ajanlar</div>
+                    <div class="main-menu-desc">Browse and select created agents</div>
+                </div>
             </div>
-        </div>
 
-        <div class="main-menu-card disabled-card">
-            <div class="notes-placeholder">
-                <div class="notes-icon">✦</div>
-                <div class="main-menu-title">Notlarım</div>
-                <div class="main-menu-desc">Yakında eklenecek</div>
+            <div class="main-menu-card disabled-card">
+                <div class="notes-placeholder">
+                    <div class="notes-icon">✦</div>
+                    <div class="main-menu-title">Notlarım</div>
+                    <div class="main-menu-desc">Yakında eklenecek</div>
+                </div>
+            </div>
+
+            <div class="main-menu-card disabled-card">
+                <div class="notes-placeholder">
+                    <div class="notes-icon">🎮</div>
+                    <div class="main-menu-title">Ajan Oyunu</div>
+                    <div class="main-menu-desc">Yakında eklenecek</div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- # AGENTS SCREEN -->
-<div id="agents-screen" class="menu-screen hidden">
-    <div class="menu-topbar">
-        <button class="menu-back-btn" id="back-to-main-btn" type="button">← BACK</button>
-        <div class="menu-screen-title">AVAILABLE AGENTS</div>
-        <input type="text" id="agent-search" class="agent-search" placeholder="Search agents...">
-    </div>
-
-    <div id="agents-grid" class="agents-grid"></div>
-</div>
-
-<!-- # CREATE AGENT MODAL -->
-<div id="create-agent-modal" class="modal hidden">
-    <div class="modal-panel">
-        <div class="modal-header">
-            <div class="modal-title">CREATE NEW AGENT</div>
-            <button id="close-create-agent-btn" class="modal-close-btn" type="button">✕</button>
+    <!-- AGENTS SCREEN -->
+    <div id="agents-screen" class="menu-screen hidden">
+        <div class="menu-topbar">
+            <button class="menu-back-btn" id="back-to-main-btn" type="button">← BACK</button>
+            <div class="menu-screen-title">AVAILABLE AGENTS</div>
+            <input type="text" id="agent-search" class="agent-search" placeholder="Search agents...">
         </div>
 
-        <form id="create-agent-form" class="create-agent-form">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="agent-name">Agent Folder Name</label>
-                    <input id="agent-name" name="name" type="text" placeholder="Winter_Agent" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="agent-display-name">Display Name</label>
-                    <input id="agent-display-name-input" name="display_name" type="text" placeholder="Winter Agent">
-                </div>
-
-                <div class="form-group">
-                    <label for="agent-age">Age</label>
-                    <input id="agent-age" name="age" type="text" placeholder="18">
-                </div>
-
-                <div class="form-group">
-                    <label for="agent-accent">Accent Color</label>
-                    <input id="agent-accent" name="accent" type="color" value="#a10000">
-                </div>
-
-                <div class="form-group">
-                    <label for="agent-accent2">Second Accent</label>
-                    <input id="agent-accent2" name="accent2" type="color" value="#ff1b1b">
-                </div>
-
-                <div class="form-group">
-                    <label for="agent-text-color">Text Color</label>
-                    <input id="agent-text-color" name="text" type="color" value="#eeeeee">
-                </div>
-
-                <div class="form-group full">
-                    <label for="agent-panel">Panel Color</label>
-                    <input id="agent-panel" name="panel" type="text" value="rgba(12, 6, 6, 0.94)">
-                </div>
-
-                <div class="form-group full">
-                    <label for="agent-personality">Personality / Behavior</label>
-                    <textarea id="agent-personality" name="personality" rows="3" placeholder="Cold, sharp, observant, dominant..."></textarea>
-                </div>
-
-                <div class="form-group full">
-                    <label for="agent-backstory">Backstory / Past</label>
-                    <textarea id="agent-backstory" name="backstory" rows="4" placeholder="Where they came from, what happened before..."></textarea>
-                </div>
-
-                <div class="form-group full">
-                    <label for="agent-first-meeting">First Meeting With User</label>
-                    <textarea id="agent-first-meeting" name="first_meeting" rows="3" placeholder="How this agent first met the user..."></textarea>
-                </div>
-
-                <div class="form-group full">
-                    <label for="agent-system-prompt">System Prompt (optional)</label>
-                    <textarea id="agent-system-prompt" name="system_prompt" rows="5" placeholder="Leave empty to auto-generate from the fields above."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="agent-profile-image">Profile Image</label>
-                    <input id="agent-profile-image" name="profile_image" type="file" accept="image/*">
-                </div>
-
-                <div class="form-group">
-                    <label for="agent-background-image">Background Image</label>
-                    <input id="agent-background-image" name="background_image" type="file" accept="image/*">
-                </div>
-            </div>
-
-            <div class="form-actions">
-                <button type="button" class="btn secondary" id="cancel-create-agent-btn">Cancel</button>
-                <button type="submit" class="btn" id="save-agent-btn">Save Agent</button>
-            </div>
-        </form>
+        <div id="agents-grid" class="agents-grid"></div>
     </div>
-</div>
 
-    <!-- # CLOCK -->
+    <!-- CREATE AGENT MODAL -->
+    <div id="create-agent-modal" class="modal hidden">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <div class="modal-title">CREATE NEW AGENT</div>
+                <button id="close-create-agent-btn" class="modal-close-btn" type="button">✕</button>
+            </div>
+
+            <form id="create-agent-form" class="create-agent-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="agent-name">Agent Folder Name</label>
+                        <input id="agent-name" name="name" type="text" placeholder="Winter_Agent" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agent-display-name-input">Display Name</label>
+                        <input id="agent-display-name-input" name="display_name" type="text" placeholder="Winter Agent">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agent-age">Age</label>
+                        <input id="agent-age" name="age" type="text" placeholder="18">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agent-accent">Accent Color</label>
+                        <input id="agent-accent" name="accent" type="color" value="#a10000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agent-accent2">Second Accent</label>
+                        <input id="agent-accent2" name="accent2" type="color" value="#ff1b1b">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agent-text-color">Text Color</label>
+                        <input id="agent-text-color" name="text" type="color" value="#eeeeee">
+                    </div>
+
+                    <div class="form-group full">
+                        <label for="panelColor">Panel Color</label>
+                        <input id="panelColor" type="color" value="#0c0606">
+                    </div>
+
+                    <div class="form-group full">
+                        <label for="agent-personality">Personality / Behavior</label>
+                        <textarea id="agent-personality" name="personality" rows="3" placeholder="Cold, sharp, observant, dominant..."></textarea>
+                    </div>
+
+                    <div class="form-group full">
+                        <label for="agent-backstory">Backstory / Past</label>
+                        <textarea id="agent-backstory" name="backstory" rows="4" placeholder="Where they came from, what happened before..."></textarea>
+                    </div>
+
+                    <div class="form-group full">
+                        <label for="agent-first-meeting">First Meeting With User</label>
+                        <textarea id="agent-first-meeting" name="first_meeting" rows="3" placeholder="How this agent first met the user..."></textarea>
+                    </div>
+
+                    <div class="form-group full">
+                        <label for="agent-system-prompt">System Prompt (optional)</label>
+                        <textarea id="agent-system-prompt" name="system_prompt" rows="5" placeholder="Leave empty to auto-generate from the fields above."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agent-profile-image">Profile Image</label>
+                        <input id="agent-profile-image" name="profile_image" type="file" accept="image/*">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="agent-background-image">Background Image</label>
+                        <input id="agent-background-image" name="background_image" type="file" accept="image/*">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" id="cancel-create-agent-btn">Cancel</button>
+                    <button type="submit" class="btn" id="save-agent-btn">Save Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CLOCK -->
     <div id="nixie-clock">00:00:00 - 00/00/0000</div>
 
-    <!-- # CHAT WINDOW -->
+    <!-- CHAT WINDOW -->
     <div class="chat-container" id="draggable">
         <div class="chat-bg" id="chat-emotion-bg"></div>
         <div class="chat-bg-overlay"></div>
-
-        <!-- # HEADER -->
+    <div class="profile-side-panel hidden" id="profile-side-panel">
+    <div class="profile-side-inner">
+        <img id="profile-side-image" class="profile-side-image" src="" alt="profile large">
+    </div>
+</div>
         <div class="header" id="drag-handle">
             <div class="avatar-wrap" title="Minimize / Restore">
                 <div class="avatar-ring idle" id="avatar-ring"></div>
@@ -165,7 +176,6 @@
             </div>
         </div>
 
-        <!-- # MESSAGES -->
         <div class="messages-wrap">
             <div class="wave-holder" id="wave-holder">
                 <canvas id="wave"></canvas>
@@ -174,7 +184,6 @@
             <div class="messages" id="box"></div>
         </div>
 
-        <!-- # STATUS / BLOCKER -->
         <div class="blocker-msg" id="blocker-msg">INITIALIZING VOICE CORE... PLEASE WAIT.</div>
 
         <div class="footer-status">
@@ -188,7 +197,6 @@
             </div>
         </div>
 
-        <!-- # INPUT -->
         <div class="input-area">
             <button class="btn clear" id="clear-btn" type="button">CLEAR</button>
             <input type="text" id="inp" class="main-input" placeholder="Ready..." autocomplete="off">
@@ -197,7 +205,7 @@
         </div>
     </div>
 
-<script src="js/app.js"></script>
-<script src="js/agents.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/agents.js"></script>
 </body>
 </html>

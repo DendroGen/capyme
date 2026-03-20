@@ -1,0 +1,15 @@
+{
+  "name": "aa",
+  "display_name": "a",
+  "age": "18",
+  "personality": "a",
+  "backstory": "a",
+  "first_meeting": "a",
+  "system_prompt": "a",
+  "theme": {
+    "accent": "#66eaad",
+    "accent2": "#885b53",
+    "panel": "rgba(12, 6, 6, 0.94)",
+    "text": "#339ecc"
+  }
+}

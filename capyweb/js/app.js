@@ -8,6 +8,7 @@ let micStream = null;
 let isRecording = false;
 let currentAudio = null;
 let isTyping = false;
+let profilePanelOpen = false;
 
 /* # DOM */
 const box = document.getElementById("box");
@@ -29,7 +30,8 @@ const voiceDot = document.getElementById("voice-dot");
 const micDot = document.getElementById("mic-dot");
 const voiceStatusText = document.getElementById("voice-status-text");
 const micStatusText = document.getElementById("mic-status-text");
-
+const profileSidePanel = document.getElementById("profile-side-panel");
+const profileSideImage = document.getElementById("profile-side-image");
 /* # CLOCK */
 function updateClock() {
     const now = new Date();
@@ -121,6 +123,9 @@ async function setAvatar(baseUrl) {
         try {
             await preloadImage(src);
             activeProfile.src = src;
+            if (profileSideImage) {
+    profileSideImage.src = src;
+}
             return;
         } catch (_) {}
     }
@@ -261,19 +266,23 @@ async function initAgent(agent) {
         const data = await res.json();
 
         if (data.theme) {
-            if (data.theme.accent) {
-                document.documentElement.style.setProperty("--accent", data.theme.accent);
-            }
-            if (data.theme.accent2) {
-                document.documentElement.style.setProperty("--accent2", data.theme.accent2);
-            }
-            if (data.theme.panel) {
-                document.documentElement.style.setProperty("--panel", data.theme.panel);
-            }
-            if (data.theme.text) {
-                document.documentElement.style.setProperty("--text", data.theme.text);
-            }
-        }
+    if (data.theme.accent) {
+        document.documentElement.style.setProperty("--accent", data.theme.accent);
+        document.documentElement.style.setProperty("--border", data.theme.accent);
+    }
+    if (data.theme.accent2) {
+        document.documentElement.style.setProperty("--accent2", data.theme.accent2);
+        document.documentElement.style.setProperty("--nixie", data.theme.accent2);
+    }
+    if (data.theme.panel) {
+        document.documentElement.style.setProperty("--panel", data.theme.panel);
+        document.documentElement.style.setProperty("--panel-2", data.theme.panel);
+    }
+    if (data.theme.text) {
+        document.documentElement.style.setProperty("--text", data.theme.text);
+        document.documentElement.style.setProperty("--muted", data.theme.text);
+    }
+}
     } catch (e) {
         console.log("Theme load error:", e);
     }
@@ -659,6 +668,9 @@ window.addEventListener("mousemove", (e) => {
     const newTop = initialTop + (e.clientY - startY);
 
     applyChatPosition(newLeft, newTop);
+    if (profilePanelOpen) {
+    updateProfilePanelPosition();
+}
 });
 
 window.addEventListener("mouseup", () => {
@@ -668,18 +680,64 @@ window.addEventListener("mouseup", () => {
 
 window.addEventListener("resize", () => {
     const rect = draggable.getBoundingClientRect();
+    if (profilePanelOpen) {
+    updateProfilePanelPosition();
+}
     if (draggable.style.display !== "none") {
         applyChatPosition(rect.left, rect.top);
     }
 });
 
-/* # MINIMIZE */
-function toggleMinimize() {
-    draggable.classList.toggle("minimized");
-    setTimeout(() => {
-        const rect = draggable.getBoundingClientRect();
-        applyChatPosition(rect.left, rect.top);
-    }, 10);
+function updateProfilePanelPosition() {
+    if (!profileSidePanel || profileSidePanel.classList.contains("hidden")) return;
+
+    const chatRect = draggable.getBoundingClientRect();
+    const panelWidth = profileSidePanel.offsetWidth || 240;
+    const gap = 12;
+
+    let panelLeft = chatRect.left - panelWidth - gap;
+    let chatLeft = chatRect.left;
+
+    if (panelLeft < 8) {
+        panelLeft = chatRect.right + gap;
+
+        if (panelLeft + panelWidth > window.innerWidth - 8) {
+            panelLeft = Math.max(8, window.innerWidth - panelWidth - 8);
+        }
+    }
+
+    if (panelLeft < 8) {
+        panelLeft = 8;
+    }
+
+    let panelTop = chatRect.top;
+    if (panelTop + profileSidePanel.offsetHeight > window.innerHeight - 8) {
+        panelTop = Math.max(8, window.innerHeight - profileSidePanel.offsetHeight - 8);
+    }
+
+    profileSidePanel.style.left = `${panelLeft}px`;
+    profileSidePanel.style.top = `${panelTop}px`;
+}
+
+function openProfilePanel() {
+    if (!profileSidePanel) return;
+    profilePanelOpen = true;
+    profileSidePanel.classList.remove("hidden");
+    updateProfilePanelPosition();
+}
+
+function closeProfilePanel() {
+    if (!profileSidePanel) return;
+    profilePanelOpen = false;
+    profileSidePanel.classList.add("hidden");
+}
+
+function toggleProfilePanel() {
+    if (profilePanelOpen) {
+        closeProfilePanel();
+    } else {
+        openProfilePanel();
+    }
 }
 
 /* # EVENTS */
@@ -695,10 +753,17 @@ inp.addEventListener("keydown", (e) => {
 
 activeProfile.addEventListener("click", (e) => {
     e.stopPropagation();
-    toggleMinimize();
+    toggleProfilePanel();
 });
 
 /* # INITIAL UI STATE */
 setVoiceStatus(false);
 setMicStatus(false);
 setTypingState(false);  
+
+function hexToRGBA(hex, alpha=0.9) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

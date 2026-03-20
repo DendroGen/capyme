@@ -13,42 +13,39 @@ const createAgentForm = document.getElementById("create-agent-form");
 
 let cachedAgents = [];
 
-/* # SCREEN HELPERS */
 function showMainMenu() {
-    selectorScreen.classList.remove("hidden");
-    agentsScreen.classList.add("hidden");
-    createAgentModal.classList.add("hidden");
+    if (selectorScreen) selectorScreen.classList.remove("hidden");
+    if (agentsScreen) agentsScreen.classList.add("hidden");
+    if (createAgentModal) createAgentModal.classList.add("hidden");
 }
 
 function showAgentsScreen() {
-    selectorScreen.classList.add("hidden");
-    agentsScreen.classList.remove("hidden");
+    if (selectorScreen) selectorScreen.classList.add("hidden");
+    if (agentsScreen) agentsScreen.classList.remove("hidden");
 }
 
 function showCreateAgentModal() {
-    createAgentModal.classList.remove("hidden");
+    if (createAgentModal) createAgentModal.classList.remove("hidden");
 }
 
 function hideCreateAgentModal() {
-    createAgentModal.classList.add("hidden");
-    createAgentForm.reset();
+    if (createAgentModal) createAgentModal.classList.add("hidden");
+    if (createAgentForm) createAgentForm.reset();
 
     const accent = document.getElementById("agent-accent");
     const accent2 = document.getElementById("agent-accent2");
     const textColor = document.getElementById("agent-text-color");
-    const panel = document.getElementById("agent-panel");
+    const panelColor = document.getElementById("panelColor");
 
     if (accent) accent.value = "#a10000";
     if (accent2) accent2.value = "#ff1b1b";
     if (textColor) textColor.value = "#eeeeee";
-    if (panel) panel.value = "rgba(12, 6, 6, 0.94)";
+    if (panelColor) panelColor.value = "#0c0606";
 }
 
-/* # RENDER */
 function createAgentCardHTML(agent) {
     const img = agent.profile_url || "http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg";
-    const personality = (agent.personality || "No personality description.")
-        .slice(0, 95);
+    const personality = (agent.personality || "No personality description.").slice(0, 95);
 
     return `
         <div class="agent-browser-card real-agent-card" data-agent-name="${agent.name}">
@@ -62,7 +59,9 @@ function createAgentCardHTML(agent) {
 }
 
 function renderAgents(agentList) {
-    const query = (agentSearch.value || "").trim().toLowerCase();
+    if (!agentsGrid) return;
+
+    const query = ((agentSearch && agentSearch.value) || "").trim().toLowerCase();
 
     const filtered = agentList.filter(agent => {
         const a = `${agent.display_name} ${agent.name} ${agent.personality || ""}`.toLowerCase();
@@ -79,14 +78,10 @@ function renderAgents(agentList) {
         </div>
     `;
 
-    agentsGrid.innerHTML =
-        createCard +
-        filtered.map(createAgentCardHTML).join("");
+    agentsGrid.innerHTML = createCard + filtered.map(createAgentCardHTML).join("");
 
     const createCardEl = document.getElementById("agent-create-card");
-    if (createCardEl) {
-        createCardEl.addEventListener("click", showCreateAgentModal);
-    }
+    if (createCardEl) createCardEl.addEventListener("click", showCreateAgentModal);
 
     document.querySelectorAll(".real-agent-card").forEach(card => {
         card.addEventListener("click", () => {
@@ -96,7 +91,6 @@ function renderAgents(agentList) {
     });
 }
 
-/* # API */
 async function fetchAgents() {
     try {
         const res = await fetch("http://127.0.0.1:5000/api/agents");
@@ -105,28 +99,43 @@ async function fetchAgents() {
         renderAgents(cachedAgents);
     } catch (err) {
         console.error("Agents fetch error:", err);
-        agentsGrid.innerHTML = `
-            <div class="agent-browser-card agent-create-card" id="agent-create-card">
-                <div class="agent-browser-content" style="align-items:center; justify-content:center; text-align:center;">
-                    <div class="agent-create-plus">!</div>
-                    <div class="agent-browser-title">Failed to load agents</div>
-                    <div class="agent-browser-sub">Backend connection error</div>
+        if (agentsGrid) {
+            agentsGrid.innerHTML = `
+                <div class="agent-browser-card agent-create-card">
+                    <div class="agent-browser-content" style="align-items:center; justify-content:center; text-align:center;">
+                        <div class="agent-create-plus">!</div>
+                        <div class="agent-browser-title">Failed to load agents</div>
+                        <div class="agent-browser-sub">Backend connection error</div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 }
 
-/* # CREATE AGENT */
+function hexToRGBA(hex, alpha = 0.94) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 async function handleCreateAgentSubmit(e) {
     e.preventDefault();
+    if (!createAgentForm) return;
 
     const formData = new FormData(createAgentForm);
     const saveBtn = document.getElementById("save-agent-btn");
-    const oldText = saveBtn.textContent;
+    const oldText = saveBtn ? saveBtn.textContent : "Save Agent";
 
-    saveBtn.disabled = true;
-    saveBtn.textContent = "Saving...";
+    const panelHex = document.getElementById("panelColor").value;
+    const panelRGBA = hexToRGBA(panelHex, 0.94);
+    formData.set("panel", panelRGBA);
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+    }
 
     try {
         const res = await fetch("http://127.0.0.1:5000/api/agents/create", {
@@ -146,21 +155,19 @@ async function handleCreateAgentSubmit(e) {
 
         if (data.agent && data.agent.name) {
             const openNow = confirm(`${data.agent.display_name || data.agent.name} created successfully. Open chat now?`);
-            if (openNow) {
-                initAgent(data.agent.name);
-            }
+            if (openNow) initAgent(data.agent.name);
         }
-
     } catch (err) {
         console.error("Create agent error:", err);
         alert("Could not create agent.");
     } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = oldText;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = oldText;
+        }
     }
 }
 
-/* # EVENTS */
 if (openAgentsBtn) {
     openAgentsBtn.addEventListener("click", async () => {
         showAgentsScreen();
@@ -168,17 +175,9 @@ if (openAgentsBtn) {
     });
 }
 
-if (backToMainBtn) {
-    backToMainBtn.addEventListener("click", showMainMenu);
-}
-
-if (closeCreateAgentBtn) {
-    closeCreateAgentBtn.addEventListener("click", hideCreateAgentModal);
-}
-
-if (cancelCreateAgentBtn) {
-    cancelCreateAgentBtn.addEventListener("click", hideCreateAgentModal);
-}
+if (backToMainBtn) backToMainBtn.addEventListener("click", showMainMenu);
+if (closeCreateAgentBtn) closeCreateAgentBtn.addEventListener("click", hideCreateAgentModal);
+if (cancelCreateAgentBtn) cancelCreateAgentBtn.addEventListener("click", hideCreateAgentModal);
 
 if (agentSearch) {
     agentSearch.addEventListener("input", () => {
@@ -192,8 +191,6 @@ if (createAgentForm) {
 
 if (createAgentModal) {
     createAgentModal.addEventListener("click", (e) => {
-        if (e.target === createAgentModal) {
-            hideCreateAgentModal();
-        }
+        if (e.target === createAgentModal) hideCreateAgentModal();
     });
 }

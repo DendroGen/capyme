@@ -1,0 +1,16 @@
+[
+  {
+    "role": "system",
+    "content": "a"
+  },
+  {
+    "role": "user",
+    "content": "hi",
+    "timestamp": "18:22:03"
+  },
+  {
+    "role": "assistant",
+    "content": "*Humans greet each other with this sound* \"Hi! Nice to see you. What are you up to today?\" *Looks around, taking in the surroundings*",
+    "timestamp": "18:22:07"
+  }
+]

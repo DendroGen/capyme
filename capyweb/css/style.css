@@ -961,3 +961,33 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+/* FORCE THEME OVERRIDE */
+button,
+.btn,
+.v-btn,
+.menu-back-btn {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #fff !important;
+}
+
+button:hover,
+.btn:hover {
+    background: var(--accent2) !important;
+}
+
+.chat-container {
+    border: 1px solid var(--accent) !important;
+}
+
+input, textarea {
+    border: 1px solid var(--accent) !important;
+    color: var(--text) !important;
+}
+
+input:focus, textarea:focus {
+    border-color: var(--accent2) !important;
+}
