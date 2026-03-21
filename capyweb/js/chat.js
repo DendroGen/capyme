@@ -1,6 +1,7 @@
-window.App = (() => {
+window.Chat = (() => {
     let currentAgent = "";
     let currentAgentData = null;
+
     let voiceEnabled = false;
     let isConnecting = false;
     let mediaRecorder = null;
@@ -9,13 +10,11 @@ window.App = (() => {
     let isRecording = false;
     let currentAudio = null;
     let isTyping = false;
-    let profilePanelOpen = true;
-    let emotionEnabled = true;
-    let currentSceneVisual = null;
 
     const box = document.getElementById("box");
     const inp = document.getElementById("inp");
     const voiceBtn = document.getElementById("voice-btn");
+    const emotionToggleBtn = document.getElementById("emotion-toggle-btn");
     const killBtn = document.getElementById("kill-btn");
     const blocker = document.getElementById("blocker-msg");
     const micBtn = document.getElementById("mic");
@@ -25,7 +24,6 @@ window.App = (() => {
     const dragHandle = document.getElementById("drag-handle");
     const activeProfile = document.getElementById("active-profile");
     const agentDisplayName = document.getElementById("agent-display-name");
-    const agentTitleText = document.getElementById("agent-title-text");
     const chatEmotionBg = document.getElementById("chat-emotion-bg");
     const avatarRing = document.getElementById("avatar-ring");
     const waveHolder = document.getElementById("wave-holder");
@@ -33,75 +31,58 @@ window.App = (() => {
     const micDot = document.getElementById("mic-dot");
     const voiceStatusText = document.getElementById("voice-status-text");
     const micStatusText = document.getElementById("mic-status-text");
-    const profileSidePanel = document.getElementById("profile-side-panel");
-    const profileSideImage = document.getElementById("profile-side-image");
     const chatBackBtn = document.getElementById("chat-back-btn");
-    const emotionToggleBtn = document.getElementById("emotion-toggle-btn");
-    const openNotesBtn = document.getElementById("open-notes-btn");
-    const notesBackBtn = document.getElementById("notes-back-btn");
-    const mainOpenKurisu = document.getElementById("main-open-kurisu");
 
     let audioCtx = null;
     let analyser = null;
     let dataArray = null;
 
-    function getCurrentAgent() {
-        return currentAgent;
-    }
-
-    function updateClock() {
-        const now = new Date();
-        const clock = document.getElementById("nixie-clock");
-        if (clock) {
-            clock.textContent =
-                now.toLocaleTimeString("tr-TR") + " - " +
-                now.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
-        }
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
     function setVoiceStatus(enabled) {
         voiceEnabled = enabled;
-        if (voiceBtn) voiceBtn.textContent = enabled ? "VOICE ENGINE: ON" : "VOICE ENGINE: OFF";
-        if (voiceBtn) voiceBtn.classList.toggle("on", enabled);
-        if (voiceDot) voiceDot.classList.toggle("on", enabled);
-        if (voiceStatusText) voiceStatusText.textContent = enabled ? "Voice online" : "Voice offline";
+        if (voiceBtn) {
+            voiceBtn.textContent = enabled ? "VOICE ENGINE: ON" : "VOICE ENGINE: OFF";
+            voiceBtn.classList.toggle("on", enabled);
+        }
+        voiceDot?.classList.toggle("on", enabled);
+        if (voiceStatusText) {
+            voiceStatusText.textContent = enabled ? "Voice online" : "Voice offline";
+        }
     }
 
     function setMicStatus(recording) {
         isRecording = recording;
-        if (micBtn) micBtn.classList.toggle("recording", recording);
-        if (micDot) micDot.classList.toggle("rec", recording);
-        if (micStatusText) micStatusText.textContent = recording ? "Mic recording" : "Mic idle";
+        micBtn?.classList.toggle("recording", recording);
+        micDot?.classList.toggle("rec", recording);
+        if (micStatusText) {
+            micStatusText.textContent = recording ? "Mic recording" : "Mic idle";
+        }
 
-        if (!avatarRing) return;
-        avatarRing.classList.remove("talking", "recording", "idle");
-
+        avatarRing?.classList.remove("idle", "talking", "recording");
         if (recording) {
-            avatarRing.classList.add("recording");
-            if (waveHolder) waveHolder.classList.add("active");
+            avatarRing?.classList.add("recording");
+            waveHolder?.classList.add("active");
         } else if (!isTyping && !currentAudio) {
-            avatarRing.classList.add("idle");
-            if (waveHolder) waveHolder.classList.remove("active");
+            avatarRing?.classList.add("idle");
+            waveHolder?.classList.remove("active");
         }
     }
 
     function setTypingState(state) {
         isTyping = state;
-        if (!avatarRing) return;
 
-        avatarRing.classList.remove("idle", "talking", "recording");
+        avatarRing?.classList.remove("idle", "talking", "recording");
 
         if (isRecording) {
-            avatarRing.classList.add("recording");
-            if (waveHolder) waveHolder.classList.add("active");
+            avatarRing?.classList.add("recording");
+            waveHolder?.classList.add("active");
         } else if (state || currentAudio) {
-            avatarRing.classList.add("talking");
-            if (waveHolder) waveHolder.classList.add("active");
+            avatarRing?.classList.add("talking");
+            waveHolder?.classList.add("active");
         } else {
-            avatarRing.classList.add("idle");
-            if (waveHolder) waveHolder.classList.remove("active");
+            avatarRing?.classList.add("idle");
+            if (!isRecording) {
+                waveHolder?.classList.remove("active");
+            }
         }
     }
 
@@ -118,54 +99,54 @@ window.App = (() => {
         const candidates = [
             `${baseUrl}/background.gif`,
             `${baseUrl}/background.webp`,
-            `${baseUrl}/background.png`,
             `${baseUrl}/background.jpg`,
+            `${baseUrl}/background.png`,
             `${baseUrl}/bg.gif`,
             `${baseUrl}/bg.webp`,
-            `${baseUrl}/bg.png`,
             `${baseUrl}/bg.jpg`,
+            `${baseUrl}/bg.png`
         ];
 
         for (const src of candidates) {
             try {
                 await preloadImage(src);
                 document.body.style.backgroundImage = `url('${src}')`;
-                return;
+                return src;
             } catch (_) {}
         }
 
         document.body.style.backgroundImage = "none";
+        return "";
     }
 
     async function setAvatar(baseUrl) {
         const candidates = [
             `${baseUrl}/profile.gif`,
             `${baseUrl}/profile.webp`,
-            `${baseUrl}/profile.png`,
             `${baseUrl}/profile.jpg`,
+            `${baseUrl}/profile.png`,
             `${baseUrl}/avatar.gif`,
             `${baseUrl}/avatar.webp`,
-            `${baseUrl}/avatar.png`,
             `${baseUrl}/avatar.jpg`,
+            `${baseUrl}/avatar.png`
         ];
 
         for (const src of candidates) {
             try {
                 await preloadImage(src);
-                if (activeProfile) activeProfile.src = src;
-                if (profileSideImage) profileSideImage.src = src;
+                activeProfile.src = src;
+                window.Visuals.setFallbackProfile(src);
                 return src;
             } catch (_) {}
         }
 
-        if (activeProfile) activeProfile.removeAttribute("src");
-        if (profileSideImage) profileSideImage.removeAttribute("src");
-        return null;
+        activeProfile.removeAttribute("src");
+        window.Visuals.setFallbackProfile("");
+        return "";
     }
 
     async function setEmotionBackground(agent, emotion) {
-        if (!emotionEnabled) return;
-        if (!agent || !emotion) {
+        if (!chatEmotionBg || !agent || !emotion) {
             chatEmotionBg?.classList.remove("show");
             return;
         }
@@ -175,68 +156,39 @@ window.App = (() => {
             `${base}/emotions/${emotion}.gif`,
             `${base}/emotions/${emotion}.webp`,
             `${base}/emotions/${emotion}.png`,
-            `${base}/emotions/${emotion}.jpg`,
-            `${base}/${emotion}.gif`,
-            `${base}/${emotion}.webp`,
-            `${base}/${emotion}.png`,
-            `${base}/${emotion}.jpg`
+            `${base}/emotions/${emotion}.jpg`
         ];
 
         for (const src of candidates) {
             try {
                 await preloadImage(src);
-                if (chatEmotionBg) {
-                    chatEmotionBg.style.backgroundImage = `url('${src}')`;
-                    chatEmotionBg.classList.add("show");
-                }
+                chatEmotionBg.style.backgroundImage = `url('${src}')`;
+                chatEmotionBg.classList.add("show");
                 return;
             } catch (_) {}
         }
 
-        chatEmotionBg?.classList.remove("show");
+        chatEmotionBg.classList.remove("show");
     }
 
-    function applySceneVisual(sceneVisual) {
-        currentSceneVisual = sceneVisual || null;
-
-        if (!profileSideImage) return;
-
-        if (!emotionEnabled) {
-            if (activeProfile?.src) profileSideImage.src = activeProfile.src;
-            return;
-        }
-
-        const poseUrl = sceneVisual?.pose_url || null;
-        const emotionUrl = sceneVisual?.emotion_url || null;
-
-        if (emotionUrl) {
-            profileSideImage.src = emotionUrl;
-            return;
-        }
-
-        if (poseUrl) {
-            profileSideImage.src = poseUrl;
-            return;
-        }
-
-        if (activeProfile?.src) {
-            profileSideImage.src = activeProfile.src;
-        }
-    }
-
-    async function loadAgentTheme(agent) {
+    async function setupAgentTheme(agent) {
         try {
-            const res = await fetch(`http://127.0.0.1:5000/api/agents/${agent}`);
+            const res = await fetch(`http://127.0.0.1:5000/api/agents/${encodeURIComponent(agent)}`);
             const data = await res.json();
             currentAgentData = data;
 
             if (data.theme) {
-                window.Theme.applyTheme(data.theme);
+                window.Theme.applyTheme({
+                    accent: data.theme.accent,
+                    accent2: data.theme.accent2,
+                    text: data.theme.text,
+                    panel: data.theme.panel_hex || data.theme.panel || "#0c0606"
+                });
             }
 
             return data;
         } catch (e) {
-            console.log("Theme load error:", e);
+            console.error("Theme load error:", e);
             currentAgentData = null;
             return null;
         }
@@ -244,31 +196,24 @@ window.App = (() => {
 
     async function initAgent(agent) {
         currentAgent = agent;
+
         const baseUrl = `http://127.0.0.1:5000/uigrounds/${agent}`;
 
         await Promise.allSettled([
             setBodyBackground(baseUrl),
             setAvatar(baseUrl),
-            loadAgentTheme(agent),
+            setupAgentTheme(agent)
         ]);
 
         if (agentDisplayName) {
-            agentDisplayName.textContent = (currentAgentData?.display_name || agent.replaceAll("_", " "));
-        }
-
-        if (agentTitleText) {
-            agentTitleText.textContent = currentAgentData?.display_name || "AMADEUS CORE";
-        }
-
-        if (profileSideImage?.src === "" && activeProfile?.src) {
-            profileSideImage.src = activeProfile.src;
+            agentDisplayName.textContent =
+                currentAgentData?.display_name || agent.replaceAll("_", " ");
         }
 
         window.UIState.showChat();
         centerChat();
-        openProfilePanel();
         await loadHistory();
-        inp?.focus();
+        setTypingState(false);
     }
 
     function scrollToBottom(smooth = false) {
@@ -286,50 +231,30 @@ window.App = (() => {
         });
     }
 
-    function createEditButton(visibleIndex, originalText) {
-        const btn = document.createElement("button");
-        btn.className = "edit-msg-btn";
-        btn.type = "button";
-        btn.textContent = "Edit";
+    function renderMessageActions(wrap, msg, visibleIndex) {
+        if (msg.role !== "user") return;
 
-        btn.addEventListener("click", async () => {
-            const updated = prompt("Mesajı düzenle:", originalText);
-            if (updated === null) return;
-            if (!updated.trim()) return;
+        const actions = document.createElement("div");
+        actions.className = "message-actions";
 
-            try {
-                const res = await fetch("http://127.0.0.1:5000/api/history/edit", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        agent: currentAgent,
-                        visible_index: visibleIndex,
-                        new_content: updated.trim()
-                    })
-                });
+        const editBtn = document.createElement("button");
+        editBtn.className = "msg-edit-btn";
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
 
-                const data = await res.json();
-                if (!res.ok) {
-                    alert(data.error || "Edit failed");
-                    return;
-                }
+        editBtn.addEventListener("click", async () => {
+            const newText = prompt("Mesajı düzenle:", msg.content || "");
+            if (newText === null) return;
+            if (!newText.trim()) return;
 
-                box.innerHTML = "";
-                (data.history || []).forEach((m, idx) => appendMsg(m, true, null, null, idx));
-                scrollToBottom();
-                await talk(updated.trim(), true);
-            } catch (err) {
-                console.error(err);
-                alert("Edit error");
-            }
+            await editMessage(visibleIndex, newText.trim());
         });
 
-        return btn;
+        actions.appendChild(editBtn);
+        wrap.appendChild(actions);
     }
 
-    function appendMsg(msg, isHistory = false, audioUrl = null, emotion = null, visibleIndex = null, sceneVisual = null) {
+    function appendMsg(msg, isHistory = false, audioUrl = null, emotion = null, scene = null, visibleIndex = null) {
         const wrap = document.createElement("div");
         wrap.className = `msg-box ${msg.role === "user" ? "user-box" : "ai-box"}`;
 
@@ -341,19 +266,26 @@ window.App = (() => {
         ts.textContent = createTimestamp(msg.timestamp);
 
         wrap.appendChild(content);
+        wrap.appendChild(ts);
 
-        if (msg.role === "user" && visibleIndex !== null) {
-            wrap.appendChild(createEditButton(visibleIndex, msg.content || ""));
+        if (typeof visibleIndex === "number") {
+            renderMessageActions(wrap, msg, visibleIndex);
         }
 
-        wrap.appendChild(ts);
-        box.appendChild(wrap);
+        box?.appendChild(wrap);
 
         if (msg.role === "assistant" && !isHistory) {
-            typeWriter(content, msg.content, audioUrl, emotion, sceneVisual);
+            typeWriter(content, msg.content || "", audioUrl, emotion, scene);
         } else {
             content.textContent = msg.content || "";
             scrollToBottom();
+
+            if (msg.role === "assistant") {
+                if (emotion && window.Visuals.isEmotionEnabled()) {
+                    setEmotionBackground(currentAgent, emotion);
+                }
+                window.Visuals.updateFromScene(scene || null);
+            }
         }
     }
 
@@ -365,54 +297,62 @@ window.App = (() => {
             currentAudio = null;
         }
 
-        const a = new Audio(audioUrl);
-        currentAudio = a;
+        currentAudio = new Audio(audioUrl);
+        currentAudio.play().catch(() => {});
         setTypingState(true);
 
-        a.play().catch(() => {});
-        a.onended = () => {
+        currentAudio.onended = () => {
             currentAudio = null;
             setTypingState(false);
         };
-        a.onerror = () => {
+
+        currentAudio.onerror = () => {
             currentAudio = null;
             setTypingState(false);
         };
     }
 
-    function typeWriter(element, text, audioUrl, emotion, sceneVisual, i = 0) {
+    function typeWriter(element, text, audioUrl, emotion, scene, i = 0) {
         if (i === 0) {
             setTypingState(true);
-            if (emotion) setEmotionBackground(currentAgent, emotion);
-            if (sceneVisual) applySceneVisual(sceneVisual);
-            if (audioUrl) setTimeout(() => playReplyAudio(audioUrl), 30);
+
+            if (emotion && window.Visuals.isEmotionEnabled()) {
+                setEmotionBackground(currentAgent, emotion);
+            }
+
+            window.Visuals.updateFromScene(scene || null);
+
+            if (audioUrl) {
+                setTimeout(() => playReplyAudio(audioUrl), 20);
+            }
         }
 
         if (i < text.length) {
             element.textContent += text.charAt(i);
             scrollToBottom();
-            setTimeout(() => typeWriter(element, text, audioUrl, emotion, sceneVisual, i + 1), 12);
-        } else {
-            if (!currentAudio) setTypingState(false);
+            setTimeout(() => typeWriter(element, text, audioUrl, emotion, scene, i + 1), 12);
+        } else if (!currentAudio) {
+            setTypingState(false);
         }
     }
 
-    async function talk(txt = null, isEditReplay = false) {
-        const value = txt ?? inp.value.trim();
+    async function talk(txt = null) {
+        const value = txt ?? inp?.value.trim();
         if (!value || !currentAgent) return;
-        if (!txt) inp.value = "";
 
-        if (!isEditReplay) {
-            const visibleIndex = document.querySelectorAll(".msg-box").length;
-            appendMsg({
-                role: "user",
-                content: value,
-                timestamp: createTimestamp()
-            }, true, null, null, visibleIndex);
+        if (!txt && inp) {
+            inp.value = "";
         }
+
+        appendMsg({
+            role: "user",
+            content: value,
+            timestamp: createTimestamp()
+        }, true, null, null, null, window.__lastVisibleUserIndex ?? 0);
 
         if (sendBtn) sendBtn.disabled = true;
         if (micBtn) micBtn.disabled = true;
+        setTypingState(true);
 
         try {
             const res = await fetch("http://127.0.0.1:5000/api/chat", {
@@ -425,20 +365,23 @@ window.App = (() => {
                 })
             });
 
-            const d = await res.json();
+            const data = await res.json();
 
             appendMsg({
                 role: "assistant",
-                content: d.reply || "*System error, Lab Mem.*",
+                content: data.reply || "*System error, Lab Mem.*",
                 timestamp: createTimestamp()
-            }, false, d.audio_url || null, d.emotion || null, null, d.scene_visual || null);
+            }, false, data.audio_url || null, data.emotion || null, data.scene || null, null);
 
+            await loadHistory(false);
         } catch (e) {
+            console.error(e);
             appendMsg({
                 role: "assistant",
                 content: "*Connection error, Lab Mem.*",
                 timestamp: createTimestamp()
             }, true);
+            setTypingState(false);
         } finally {
             if (sendBtn) sendBtn.disabled = false;
             if (micBtn) micBtn.disabled = false;
@@ -446,26 +389,95 @@ window.App = (() => {
         }
     }
 
-    async function loadHistory() {
+    async function loadHistory(clearFirst = true) {
         try {
             const res = await fetch(`http://127.0.0.1:5000/api/history?agent=${encodeURIComponent(currentAgent)}`);
-            const d = await res.json();
-            box.innerHTML = "";
+            const data = await res.json();
 
-            let visibleIndex = 0;
-
-            (d.history || []).forEach(m => {
-                appendMsg(m, true, null, null, visibleIndex);
-                visibleIndex += 1;
-            });
-
-            if (activeProfile?.src) {
-                profileSideImage.src = activeProfile.src;
+            if (clearFirst && box) {
+                box.innerHTML = "";
             }
 
+            let visibleUserIndex = 0;
+
+            (data.history || []).forEach((m) => {
+                const idx = m.role === "user" ? visibleUserIndex++ : null;
+                appendMsg(m, true, null, null, null, idx);
+            });
+
+            window.__lastVisibleUserIndex = visibleUserIndex;
             scrollToBottom();
-        } catch (_) {
-            box.innerHTML = "";
+        } catch (e) {
+            console.error("History load error:", e);
+            if (box && clearFirst) {
+                box.innerHTML = "";
+            }
+        }
+    }
+
+    async function editMessage(visibleIndex, newContent) {
+        if (!currentAgent) return;
+
+        try {
+            const res = await fetch("http://127.0.0.1:5000/api/history/edit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    agent: currentAgent,
+                    visible_index: visibleIndex,
+                    new_content: newContent
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error || "Mesaj düzenlenemedi.");
+                return;
+            }
+
+            if (box) {
+                box.innerHTML = "";
+            }
+
+            let visibleUserIndex = 0;
+            (data.history || []).forEach((m) => {
+                const idx = m.role === "user" ? visibleUserIndex++ : null;
+                appendMsg(m, true, null, null, null, idx);
+            });
+
+            window.__lastVisibleUserIndex = visibleUserIndex;
+            scrollToBottom();
+
+            if (data.reply) {
+                appendMsg({
+                    role: "assistant",
+                    content: data.reply,
+                    timestamp: createTimestamp()
+                }, false, data.audio_url || null, data.emotion || null, data.scene || null, null);
+            }
+        } catch (e) {
+            console.error("Edit message error:", e);
+            alert("Mesaj düzenlenemedi.");
+        }
+    }
+
+    async function clearHistory() {
+        if (!currentAgent) return;
+
+        const ok = confirm(`${currentAgent} geçmişini silmek istiyor musun?`);
+        if (!ok) return;
+
+        try {
+            await fetch(`http://127.0.0.1:5000/api/clear_history?agent=${encodeURIComponent(currentAgent)}`, {
+                method: "POST"
+            });
+
+            if (box) box.innerHTML = "";
+            chatEmotionBg?.classList.remove("show");
+            window.Visuals.showFallbackProfile();
+        } catch {
+            alert("Could not clear history.");
         }
     }
 
@@ -482,8 +494,10 @@ window.App = (() => {
                 if (sendBtn) sendBtn.disabled = true;
 
                 const res = await fetch("http://127.0.0.1:5000/api/gvc/start", { method: "POST" });
-                if (res.ok) setVoiceStatus(true);
-            } catch (_) {
+                if (res.ok) {
+                    setVoiceStatus(true);
+                }
+            } catch {
                 setVoiceStatus(false);
             } finally {
                 isConnecting = false;
@@ -500,35 +514,19 @@ window.App = (() => {
     async function killGVC() {
         try {
             await fetch("http://127.0.0.1:5000/api/gvc/kill", { method: "POST" });
-        } catch (_) {}
+        } catch {}
         setVoiceStatus(false);
         alert("Engine Killed.");
     }
 
-    async function clearHistory() {
-        if (!currentAgent) return;
-        const ok = confirm(`Delete ${currentAgent} chat history JSON?`);
-        if (!ok) return;
-
-        try {
-            await fetch(`http://127.0.0.1:5000/api/clear_history?agent=${encodeURIComponent(currentAgent)}`, {
-                method: "POST"
-            });
-            box.innerHTML = "";
-            chatEmotionBg?.classList.remove("show");
-            if (activeProfile?.src) profileSideImage.src = activeProfile.src;
-        } catch (_) {
-            alert("Could not clear history.");
-        }
-    }
-
     async function ensureMic() {
         if (micStream) return true;
+
         try {
             micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             setupWaveform(micStream);
             return true;
-        } catch (e) {
+        } catch {
             alert("Microphone access denied or unavailable.");
             return false;
         }
@@ -565,7 +563,6 @@ window.App = (() => {
             const rect = canvas.getBoundingClientRect();
             const width = rect.width;
             const height = rect.height;
-
             ctx.clearRect(0, 0, width, height);
 
             if (!analyser || (!isRecording && !isTyping && !currentAudio)) {
@@ -580,7 +577,6 @@ window.App = (() => {
             }
 
             analyser.getByteFrequencyData(dataArray);
-
             const bars = dataArray.length;
             const gap = 3;
             const barWidth = Math.max(2, (width - (bars - 1) * gap) / bars);
@@ -599,7 +595,6 @@ window.App = (() => {
 
                 const x = i * (barWidth + gap);
                 const y = (height - barHeight) / 2;
-
                 ctx.fillStyle = "rgba(255, 35, 35, 0.92)";
                 ctx.fillRect(x, y, barWidth, barHeight);
             }
@@ -619,7 +614,9 @@ window.App = (() => {
             mediaRecorder = new MediaRecorder(micStream);
 
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) chunks.push(e.data);
+                if (e.data && e.data.size > 0) {
+                    chunks.push(e.data);
+                }
             };
 
             mediaRecorder.onstop = async () => {
@@ -638,25 +635,27 @@ window.App = (() => {
                         method: "POST",
                         body: fd
                     });
-                    const d = await res.json();
 
-                    if (d.user_text) {
-                        const visibleIndex = document.querySelectorAll(".msg-box").length;
+                    const data = await res.json();
+
+                    if (data.user_text) {
                         appendMsg({
                             role: "user",
-                            content: d.user_text,
+                            content: data.user_text,
                             timestamp: createTimestamp()
-                        }, true, null, null, visibleIndex);
+                        }, true, null, null, null, window.__lastVisibleUserIndex ?? 0);
                     }
 
-                    if (d.reply) {
+                    if (data.reply) {
                         appendMsg({
                             role: "assistant",
-                            content: d.reply,
+                            content: data.reply,
                             timestamp: createTimestamp()
-                        }, false, d.audio_url || null, d.emotion || null, null, d.scene_visual || null);
+                        }, false, data.audio_url || null, data.emotion || null, data.scene || null, null);
                     }
-                } catch (_) {
+
+                    await loadHistory(false);
+                } catch {
                     appendMsg({
                         role: "assistant",
                         content: "*Voice connection error.*",
@@ -670,7 +669,7 @@ window.App = (() => {
 
             mediaRecorder.start();
             setMicStatus(true);
-        } catch (_) {
+        } catch {
             setMicStatus(false);
             alert("Could not start recording.");
         }
@@ -684,8 +683,11 @@ window.App = (() => {
 
     async function toggleRecording() {
         if (!currentAgent) return;
-        if (!isRecording) await startRecording();
-        else stopRecording();
+        if (!isRecording) {
+            await startRecording();
+        } else {
+            stopRecording();
+        }
     }
 
     let dragging = false;
@@ -697,13 +699,13 @@ window.App = (() => {
     function clampChatPosition(left, top) {
         const rect = draggable.getBoundingClientRect();
         const w = rect.width;
-        const h = rect.height;
+        const margin = 10;
+        const headerVisible = 60;
 
-        const margin = 8;
         const minLeft = margin;
         const maxLeft = Math.max(margin, window.innerWidth - w - margin);
         const minTop = margin;
-        const maxTop = Math.max(margin, window.innerHeight - h - margin);
+        const maxTop = Math.max(margin, window.innerHeight - headerVisible);
 
         return {
             left: Math.min(Math.max(left, minLeft), maxLeft),
@@ -716,22 +718,23 @@ window.App = (() => {
         draggable.style.left = `${clamped.left}px`;
         draggable.style.top = `${clamped.top}px`;
         draggable.style.transform = "none";
-        updateProfilePanelPosition();
     }
 
     function centerChat() {
-        const width = draggable.offsetWidth || 460;
-        const height = draggable.offsetHeight || 690;
-        const left = Math.max(8, (window.innerWidth - width) / 2);
-        const top = Math.max(8, (window.innerHeight - height) / 2);
+        const width = draggable.offsetWidth || 540;
+        const height = draggable.offsetHeight || 740;
+        const left = Math.max(10, (window.innerWidth - width) / 2);
+        const top = Math.max(10, (window.innerHeight - height) / 2);
         applyChatPosition(left, top);
+        updateProfilePanelPosition();
     }
 
     function updateProfilePanelPosition() {
+        const profileSidePanel = document.getElementById("profile-side-panel");
         if (!profileSidePanel || profileSidePanel.classList.contains("hidden")) return;
 
         const chatRect = draggable.getBoundingClientRect();
-        const panelWidth = profileSidePanel.offsetWidth || 270;
+        const panelWidth = profileSidePanel.offsetWidth || 280;
         const gap = 12;
 
         let panelLeft = chatRect.left - panelWidth - gap;
@@ -743,118 +746,92 @@ window.App = (() => {
         }
 
         let panelTop = chatRect.top;
-        if (panelTop + profileSidePanel.offsetHeight > window.innerHeight - 8) {
-            panelTop = Math.max(8, window.innerHeight - profileSidePanel.offsetHeight - 8);
-        }
+        const maxTop = Math.max(8, window.innerHeight - profileSidePanel.offsetHeight - 8);
+        if (panelTop > maxTop) panelTop = maxTop;
 
         profileSidePanel.style.left = `${panelLeft}px`;
         profileSidePanel.style.top = `${panelTop}px`;
     }
 
-    function openProfilePanel() {
-        if (!profileSidePanel) return;
-        profilePanelOpen = true;
-        profileSidePanel.classList.remove("hidden");
-        updateProfilePanelPosition();
-    }
-
-    function closeProfilePanel() {
-        if (!profileSidePanel) return;
-        profilePanelOpen = false;
-        profileSidePanel.classList.add("hidden");
-    }
-
-    function toggleProfilePanel() {
-        if (profilePanelOpen) closeProfilePanel();
-        else openProfilePanel();
-    }
-
-    function toggleEmotionSystem() {
-        emotionEnabled = !emotionEnabled;
-        if (emotionToggleBtn) {
-            emotionToggleBtn.textContent = emotionEnabled ? "EMOTION: ON" : "EMOTION: OFF";
-            emotionToggleBtn.classList.toggle("on", emotionEnabled);
-        }
-
-        if (!emotionEnabled) {
-            chatEmotionBg?.classList.remove("show");
-            if (activeProfile?.src) profileSideImage.src = activeProfile.src;
-        } else {
-            applySceneVisual(currentSceneVisual);
-        }
-    }
-
-    function goBackFromChat() {
-        closeProfilePanel();
+    function goBackToMenu() {
+        document.body.style.backgroundImage = "none";
+        window.Theme.applyDefaultTheme();
+        window.Visuals.closePanel();
         window.UIState.showMainMenu();
     }
 
-    dragHandle?.addEventListener("mousedown", (e) => {
-        if (e.target === activeProfile) return;
-        if (e.target === chatBackBtn) return;
-        if (e.target === emotionToggleBtn) return;
-        dragging = true;
+    function bindEvents() {
+        voiceBtn?.addEventListener("click", toggleVoice);
+        killBtn?.addEventListener("click", killGVC);
+        clearBtn?.addEventListener("click", clearHistory);
+        micBtn?.addEventListener("click", toggleRecording);
+        sendBtn?.addEventListener("click", () => talk());
 
-        const rect = draggable.getBoundingClientRect();
-        initialLeft = rect.left;
-        initialTop = rect.top;
-        startX = e.clientX;
-        startY = e.clientY;
+        inp?.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                talk();
+            }
+        });
 
-        draggable.style.transform = "none";
-        document.body.style.userSelect = "none";
-    });
+        activeProfile?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            window.Visuals.togglePanel();
+            updateProfilePanelPosition();
+        });
 
-    window.addEventListener("mousemove", (e) => {
-        if (!dragging) return;
-        const newLeft = initialLeft + (e.clientX - startX);
-        const newTop = initialTop + (e.clientY - startY);
-        applyChatPosition(newLeft, newTop);
-    });
+        emotionToggleBtn?.addEventListener("click", () => {
+            const next = !window.Visuals.isEmotionEnabled();
+            window.Visuals.setEmotionEnabled(next);
+            emotionToggleBtn.textContent = next ? "EMOTION: ON" : "EMOTION: OFF";
+        });
 
-    window.addEventListener("mouseup", () => {
-        dragging = false;
-        document.body.style.userSelect = "";
-    });
+        chatBackBtn?.addEventListener("click", goBackToMenu);
 
-    window.addEventListener("resize", () => {
-        const rect = draggable.getBoundingClientRect();
-        if (draggable.style.display !== "none") {
-            applyChatPosition(rect.left, rect.top);
-        }
-    });
+        dragHandle?.addEventListener("mousedown", (e) => {
+            if (e.target === activeProfile) return;
 
-    voiceBtn?.addEventListener("click", toggleVoice);
-    killBtn?.addEventListener("click", killGVC);
-    clearBtn?.addEventListener("click", clearHistory);
-    micBtn?.addEventListener("click", toggleRecording);
-    sendBtn?.addEventListener("click", () => talk());
+            dragging = true;
+            const rect = draggable.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            startX = e.clientX;
+            startY = e.clientY;
+            draggable.style.transform = "none";
+            document.body.style.userSelect = "none";
+        });
 
-    inp?.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") talk();
-    });
+        window.addEventListener("mousemove", (e) => {
+            if (!dragging) return;
+            const newLeft = initialLeft + (e.clientX - startX);
+            const newTop = initialTop + (e.clientY - startY);
+            applyChatPosition(newLeft, newTop);
+            updateProfilePanelPosition();
+        });
 
-    activeProfile?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggleProfilePanel();
-    });
+        window.addEventListener("mouseup", () => {
+            dragging = false;
+            document.body.style.userSelect = "";
+        });
 
-    chatBackBtn?.addEventListener("click", goBackFromChat);
-    emotionToggleBtn?.addEventListener("click", toggleEmotionSystem);
+        window.addEventListener("resize", () => {
+            if (!draggable.classList.contains("hidden")) {
+                const rect = draggable.getBoundingClientRect();
+                applyChatPosition(rect.left, rect.top);
+                updateProfilePanelPosition();
+            }
+        });
+    }
 
-    openNotesBtn?.addEventListener("click", () => window.UIState.showNotesScreen());
-    notesBackBtn?.addEventListener("click", () => window.UIState.showMainMenu());
-    mainOpenKurisu?.addEventListener("click", () => initAgent("Makise_Kurisu"));
-
+    bindEvents();
     setVoiceStatus(false);
     setMicStatus(false);
     setTypingState(false);
-    if (emotionToggleBtn) emotionToggleBtn.textContent = "EMOTION: ON";
 
     return {
         initAgent,
-        talk,
+        centerChat,
+        updateProfilePanelPosition,
         loadHistory,
-        getCurrentAgent
+        currentAgent: () => currentAgent
     };
 })();

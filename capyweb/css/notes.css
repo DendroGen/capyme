@@ -1,0 +1,41 @@
+#notes-screen .menu-shell {
+    gap: 16px;
+}
+
+#notes-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.note-card {
+    min-height: 220px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    background: color-mix(in srgb, var(--panel) 88%, black 12%);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.note-card-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.note-card-preview {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--text) 72%, transparent);
+}
+
+.note-card-meta {
+    font-size: 11px;
+    color: color-mix(in srgb, var(--text) 56%, transparent);
+}

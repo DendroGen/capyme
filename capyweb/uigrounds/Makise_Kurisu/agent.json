@@ -9,20 +9,16 @@
   "theme": {
     "accent": "#a10000",
     "accent2": "#ff1b1b",
-    "panel": "rgba(12, 6, 6, 0.94)",
+    "panel": "rgba(18, 9, 9, 0.94)",
     "text": "#eeeeee"
   },
-  "emotions": [],
   "poses": [
     {
-      "key": "ComfyUI_00002_.png",
       "label": "work",
       "description": "working",
-      "triggers": [
-        "work",
-        "working"
-      ],
-      "image_url": "http://127.0.0.1:5000/uigrounds/Makise_Kurisu/poses/ComfyUI_00002_.png"
+      "tags": "",
+      "file": "poses/ComfyUI_00002_.png"
     }
-  ]
+  ],
+  "emotions": []
 }

@@ -1,0 +1,25 @@
+{
+  "ui": {
+    "accent": "#a10000",
+    "accent2": "#ff1b1b",
+    "text": "#eeeeee",
+    "panel": "#0c0606"
+  },
+  "audio": {
+    "boot": {
+      "enabled": true,
+      "url": "",
+      "volume": 0.65
+    },
+    "click": {
+      "enabled": true,
+      "url": "",
+      "volume": 0.35
+    }
+  },
+  "notes": {
+    "ai_enabled": true,
+    "autosave": true,
+    "default_theme": "dark"
+  }
+}

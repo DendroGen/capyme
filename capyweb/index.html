@@ -17,7 +17,7 @@
         <div class="selector-subtitle">Select an active cognition profile</div>
 
         <div class="main-menu-grid">
-            <div class="main-menu-card featured" id="open-kurisu-btn">
+            <div class="main-menu-card featured" id="main-open-kurisu">
                 <img src="http://127.0.0.1:5000/uigrounds/Makise_Kurisu/profile.jpg" alt="Makise Kurisu">
                 <div class="main-menu-label">
                     <div class="main-menu-title">Makise Kurisu</div>
@@ -33,7 +33,7 @@
                 </div>
             </div>
 
-            <div class="main-menu-card disabled-card" id="open-notes-btn">
+            <div class="main-menu-card" id="open-notes-btn">
                 <div class="notes-placeholder">
                     <div class="notes-icon">✦</div>
                     <div class="main-menu-title">Notlarım</div>
@@ -53,27 +53,36 @@
 
     <!-- AGENTS SCREEN -->
     <div id="agents-screen" class="menu-screen hidden">
-        <div class="menu-topbar">
-            <button class="menu-back-btn" id="back-to-main-btn" type="button">← BACK</button>
-            <div class="menu-screen-title">AVAILABLE AGENTS</div>
-            <input type="text" id="agent-search" class="agent-search" placeholder="Search agents...">
+        <div class="menu-topbar agents-topbar">
+            <div class="agents-topbar-left">
+                <button class="menu-back-btn" id="back-to-main-btn" type="button">← BACK</button>
+                <div class="menu-screen-title">AVAILABLE AGENTS</div>
+            </div>
+
+            <div class="agents-topbar-center">
+                <button type="button" class="agents-filter-btn active" data-filter="all">All</button>
+                <button type="button" class="agents-filter-btn" data-filter="poses">With Poses</button>
+                <button type="button" class="agents-filter-btn" data-filter="emotions">With Emotions</button>
+            </div>
+
+            <div class="agents-topbar-right">
+                <input type="text" id="agent-search" class="agent-search" placeholder="Search agents...">
+            </div>
         </div>
 
-        <div id="agents-grid" class="agents-grid"></div>
+        <div id="agents-grid" class="agents-grid agents-grid-rich"></div>
     </div>
 
     <!-- PASSWORD MODAL -->
     <div id="agents-password-modal" class="modal hidden">
         <div class="modal-panel password-panel">
             <div class="modal-header">
-                <div class="modal-title">AJAN ŞİFRESİ</div>
+                <div class="modal-title">AJANLAR ŞİFRESİ</div>
             </div>
 
-            <div class="form-grid">
-                <div class="form-group full">
-                    <label for="agents-password-input">Şifre</label>
-                    <input id="agents-password-input" type="password" placeholder="Şifrenizi girin">
-                </div>
+            <div class="form-group full">
+                <label for="agents-password-input">Şifre</label>
+                <input id="agents-password-input" type="password" placeholder="Şifrenizi girin">
             </div>
 
             <div class="form-actions">
@@ -85,14 +94,15 @@
 
     <!-- CREATE / EDIT AGENT MODAL -->
     <div id="create-agent-modal" class="modal hidden">
-        <div class="modal-panel">
+        <div class="modal-panel modal-panel-large">
             <div class="modal-header">
-                <div class="modal-title" id="agent-modal-title">CREATE / EDIT AGENT</div>
+                <div class="modal-title" id="create-agent-modal-title">CREATE NEW AGENT</div>
                 <button id="close-create-agent-btn" class="modal-close-btn" type="button">✕</button>
             </div>
 
             <form id="create-agent-form" class="create-agent-form">
-                <input type="hidden" id="original-agent-name" name="original_name">
+                <input type="hidden" id="form-mode" value="create">
+                <input type="hidden" id="editing-agent-name" value="">
 
                 <div class="form-grid">
                     <div class="form-group">
@@ -127,27 +137,9 @@
 
                     <div class="form-group full">
                         <label for="panelColor">Panel Color</label>
-                        <input id="panelColor" type="color" value="#0c0606">
+                        <input id="panelColor" type="color" value="#120909">
                     </div>
 
-<div class="form-group full">
-    <label>Current Visual Preview</label>
-    <div class="agent-edit-preview">
-        <div class="agent-edit-preview-box">
-            <div class="agent-edit-preview-title">Profile</div>
-            <img id="agent-profile-preview" src="" alt="profile preview">
-        </div>
-
-        <div class="agent-edit-preview-box">
-            <div class="agent-edit-preview-title">Background</div>
-            <img id="agent-background-preview" src="" alt="background preview">
-        </div>
-    </div>
-</div>
-
-
-                
-                    
                     <div class="form-group full">
                         <label for="agent-personality">Personality / Behavior</label>
                         <textarea id="agent-personality" name="personality" rows="3" placeholder="Cold, observant, dominant, quiet..."></textarea>
@@ -169,51 +161,75 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="agent-profile-image">Profile Image</label>
-                        <input id="agent-profile-image" name="profile_image" type="file" accept="image/*">
-                        <div id="current-profile-preview" class="current-preview hidden"></div>
+                        <label for="agent-profile-image">Profile Image / GIF</label>
+                        <input id="agent-profile-image" name="profile_image" type="file" accept="image/*,.gif">
+                        <div id="profile-preview-wrap" class="mini-preview-wrap"></div>
                     </div>
 
                     <div class="form-group">
-                        <label for="agent-background-image">Background Image</label>
-                        <input id="agent-background-image" name="background_image" type="file" accept="image/*">
-                        <div id="current-background-preview" class="current-preview hidden"></div>
+                        <label for="agent-background-image">Background Image / GIF</label>
+                        <input id="agent-background-image" name="background_image" type="file" accept="image/*,.gif">
+                        <div id="background-preview-wrap" class="mini-preview-wrap"></div>
                     </div>
 
                     <div class="form-group full">
                         <div class="section-title">Visual Scene Setup</div>
                         <div class="section-desc">
-                            Poz ve duygu görselleri ekleyebilirsin. Sistem cevap içeriğine göre uygun olanı seçmeye çalışır.
+                            Burada pozlar ve duygular ekleyebilirsin. Sistem cevap akışına göre en uygun olanı seçmeye çalışır.
                         </div>
                     </div>
 
-                    <!-- POSES -->
-                    <div class="form-group full visual-block">
-                        <div class="visual-block-header">
-                            <div class="visual-block-title">Pozlar</div>
-                            <button type="button" class="btn secondary small-btn" id="add-pose-row-btn">+ Poz Ekle</button>
+                    <!-- VISUALS NAV -->
+                    <div class="form-group full">
+                        <div class="visual-settings-nav">
+                            <button type="button" class="visual-tab-btn active" data-visual-tab="poses">Pozlar</button>
+                            <button type="button" class="visual-tab-btn" data-visual-tab="emotions">Duygular</button>
                         </div>
-                        <div id="pose-rows" class="visual-rows"></div>
                     </div>
 
-                    <!-- EMOTIONS -->
-                    <div class="form-group full visual-block">
-                        <div class="visual-block-header">
-                            <div class="visual-block-title">Duygular</div>
-                            <button type="button" class="btn secondary small-btn" id="add-emotion-row-btn">+ Duygu Ekle</button>
+                    <!-- POSES TAB -->
+                    <div class="form-group full visual-tab-content" id="visual-tab-poses">
+                        <div class="visual-block">
+                            <div class="visual-block-header">
+                                <div class="visual-block-title">Pozlar</div>
+                                <button type="button" class="btn secondary small-btn" id="add-pose-row-btn">+ Poz satırı ekle</button>
+                            </div>
+                            <div id="pose-rows" class="visual-rows"></div>
                         </div>
-                        <div id="emotion-rows" class="visual-rows"></div>
+                    </div>
+
+                    <!-- EMOTIONS TAB -->
+                    <div class="form-group full visual-tab-content hidden" id="visual-tab-emotions">
+                        <div class="visual-block">
+                            <div class="visual-block-header">
+                                <div class="visual-block-title">Duygular</div>
+                                <button type="button" class="btn secondary small-btn" id="add-emotion-row-btn">+ Duygu satırı ekle</button>
+                            </div>
+                            <div id="emotion-rows" class="visual-rows"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-actions">
-                    <button type="button" class="btn danger" id="delete-agent-btn">Ajanı Sil</button>
-                    <div class="form-actions-right">
-                        <button type="button" class="btn secondary" id="cancel-create-agent-btn">Cancel</button>
-                        <button type="submit" class="btn" id="save-agent-btn">Save Agent</button>
-                    </div>
+                <div class="form-actions sticky-form-actions">
+                    <button type="button" class="btn secondary" id="cancel-create-agent-btn">Cancel</button>
+                    <button type="submit" class="btn" id="save-agent-btn">Save Agent</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- NOTES SCREEN -->
+    <div id="notes-screen" class="menu-screen hidden">
+        <div class="menu-topbar">
+            <button class="menu-back-btn" id="notes-back-btn" type="button">← BACK</button>
+            <div class="menu-screen-title">NOTLARIM</div>
+            <div></div>
+        </div>
+
+        <div class="notes-placeholder-big">
+            <div class="notes-icon">✦</div>
+            <div class="main-menu-title">Not sistemi hazır alan</div>
+            <div class="main-menu-desc">Bir sonraki aşamada burada çalışacağız.</div>
         </div>
     </div>
 
@@ -234,8 +250,12 @@
             </div>
 
             <div class="agent-meta">
-                <div class="agent-title">AMADEUS CORE</div>
+                <div class="agent-title" id="agent-title-text">AMADEUS CORE</div>
                 <div class="agent-subtitle" id="agent-display-name">---</div>
+            </div>
+
+            <div class="header-switches">
+                <button id="emotion-toggle-btn" class="v-btn" type="button">EMOTION: ON</button>
             </div>
 
             <div class="voice-controls">
@@ -248,6 +268,7 @@
             <div class="wave-holder" id="wave-holder">
                 <canvas id="wave"></canvas>
             </div>
+
             <div class="messages" id="box"></div>
         </div>
 
@@ -282,7 +303,7 @@
     <script src="js/ui_state.js"></script>
     <script src="js/theme.js"></script>
     <script src="js/visuals.js"></script>
-    <script src="js/agents.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/agents.js"></script>
 </body>
 </html>
